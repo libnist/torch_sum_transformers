@@ -41,6 +41,10 @@ class TripleEmbeddingBlock(nn.Module):
     def forward(self,
                 tokens: torch.tensor,
                 token_types: torch.tensor) -> torch.tensor:
+        
+        # Getting the length of the input
+        token_length = tokens.shape[-1]
+        
         # Perform word embeddings.
         word_embedding = self.word_embedding(tokens)
         
@@ -48,7 +52,9 @@ class TripleEmbeddingBlock(nn.Module):
         type_embedding = self.type_embedding(token_types)
         
         # Add all the embeddings to produce the output tensor
-        return word_embedding + type_embedding + self.positional_embedding
+        return (word_embedding + 
+                type_embedding + 
+                self.positional_embedding[:token_length, :])
 
 
 class MLPBlock(nn.Module):
