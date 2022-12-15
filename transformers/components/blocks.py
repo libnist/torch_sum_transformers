@@ -54,7 +54,7 @@ class TripleEmbeddingBlock(nn.Module):
         # Add all the embeddings to produce the output tensor
         return (word_embedding + 
                 type_embedding + 
-                self.positional_embedding[:token_length, :])
+                self.positional_embedding[0, :token_length, :])
 
 
 class MLPBlock(nn.Module):

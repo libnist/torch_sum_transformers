@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from typing import List
 
-import tokenizer
+from . import tokenizer
 import numpy as np
 import os
 

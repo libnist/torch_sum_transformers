@@ -12,8 +12,8 @@ from collections import defaultdict
 
 
 def train_step(model: torch.nn.Module,
-               dataloader: torch.data.utils.DataLoader,
-               loss_functionn: torch.nn.Module,
+               dataloader: torch.utls.data.DataLoader,
+               loss_function: torch.nn.Module,
                accuracy_function: FunctionType,
                optimizer: torch.optim.Optimizers,
                batch_verbose: int = 100) -> Tuple[float, float]:
@@ -43,7 +43,7 @@ def train_step(model: torch.nn.Module,
     train_loss, train_acc = 0, 0
 
     batch_size = dataloader.batch_size
-    num_batches = len(batch_size)
+    num_batches = len(dataloader)
 
     # device of the dataloader is already set.
     for batch, (X, y) in enumerate(dataloader):
@@ -67,7 +67,7 @@ def train_step(model: torch.nn.Module,
         # The output is in shape:
         # [batch_size, summary_token_length, sum_vocab_size]
         sum_pred_outputs = model(document_tokens=doc_tokens,
-                                 doc_token_types=doc_token_types,
+                                 document_token_types=doc_token_types,
                                  summary_tokens=sum_input_tokens,
                                  summary_token_types=sum_input_token_types)
 
@@ -80,7 +80,7 @@ def train_step(model: torch.nn.Module,
         sum_preds = torch.argmax(sum_pred_probs, dim=-1)
 
         # Calculating loss
-        loss = loss_functionn(sum_preds, sum_target_token_types)
+        loss = loss_function(sum_pred_outputs, sum_target_token_types)
         train_loss += loss.item()
 
         # Bacward pass and updating weights
@@ -88,7 +88,9 @@ def train_step(model: torch.nn.Module,
         loss.backward()
         optimizer.step()
 
-        accuracy = accuracy_function(sum_preds, sum_target_tokens)
+        # accuracy = accuracy_function(sum_pred_outputs, sum_target_tokens)
+        accuracy = torch.sum(sum_preds == sum_target_tokens)
+        accuracy /= torch.numel(sum_preds)
         train_acc += accuracy.item()
 
         if not batch % batch_verbose:
@@ -105,7 +107,7 @@ def train_step(model: torch.nn.Module,
 
 
 def test_step(model: torch.nn.Module,
-              dataloader: torch.data.utils.DataLoader,
+              dataloader: torch.utls.data.DataLoader,
               loss_function: torch.nn.Module,
               accuracy_function: FunctionType) -> Tuple[float, float]:
     """Performs one validation step on validation or test dataset.
@@ -146,7 +148,7 @@ def test_step(model: torch.nn.Module,
 
             # Forward pass
             sum_pred_outputs = model(document_tokens=doc_tokens,
-                                     doc_token_types=doc_token_types,
+                                     document_token_types=doc_token_types,
                                      summary_tokens=sum_input_tokens,
                                      summary_token_types=sum_input_token_types)
 
@@ -159,10 +161,12 @@ def test_step(model: torch.nn.Module,
             sum_preds = torch.argmax(sum_pred_probs, dim=-1)
 
             # Calculating loss
-            loss = loss_function(sum_preds, sum_target_token_types)
+            loss = loss_function(sum_pred_outputs, sum_target_token_types)
             test_loss += loss.item()
 
-            accuracy = accuracy_function(sum_preds, sum_target_tokens)
+            # accuracy = accuracy_function(sum_pred_outputs, sum_target_tokens)
+            accuracy = torch.sum(sum_preds == sum_target_tokens)
+            accuracy /= torch.numel(sum_preds)
             test_acc += accuracy.item()
 
     test_loss /= len(dataloader.dataset)
@@ -175,8 +179,8 @@ def test_step(model: torch.nn.Module,
 
 
 def train(model: torch.nn.Module,
-          train_dataloader: torch.data.utils.DataLoader,
-          test_dataloader: torch.data.utils.DataLoader,
+          train_dataloader: torch.utls.data.DataLoader,
+          test_dataloader: torch.utls.data.DataLoader,
           loss_function: torch.nn.Module,
           accuracy_function: FunctionType,
           optimizer: torch.optim.Optimzier,
