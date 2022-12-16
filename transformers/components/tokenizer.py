@@ -166,3 +166,7 @@ class CustomTokenizer:
             int: int
         """
         return self._tokenizer.token_to_id(token)
+    
+    @property
+    def vocab_size(self):
+        return self._tokenizer.get_vocab_size()

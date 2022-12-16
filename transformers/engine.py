@@ -95,14 +95,14 @@ def train_step(model: torch.nn.Module,
         train_acc += accuracy.item()
 
         if not batch % batch_verbose:
-            loss_to_print = loss.item() / (batch_size * (batch + 1))
-            accuracy_to_print = accuracy.item() / (batch_size * (batch + 1))
+            loss_to_print = train_loss / (batch_size * (batch + 1))
+            accuracy_to_print = train_acc / (batch_size * (batch + 1))
             
-            print(f"\tBatch {batch} of {num_batches:.2f}" +
-                  f" or {batch/num_batches}% of the epcch: ", end="")
+            print(f"\tBatch {batch} of {num_batches}" +
+                  f" or {batch/num_batches*100:.2f}% of the epochs: ", end="")
             
-            print(f"Train Loss: {loss_to_print:4.4f} |  " + 
-                  f"Train Accuracy: {accuracy_to_print:4.4f}")
+            print(f"Train Loss: {loss_to_print:8.4f} |  " + 
+                  f"Train Accuracy: {accuracy_to_print:8.4f}")
 
     train_loss /= len(dataloader.dataset)
     train_acc /= len(dataloader.dataset)
@@ -232,7 +232,7 @@ def train(model: torch.nn.Module,
 
         test_loss, test_acc = test_step(model=model,
                                         dataloader=test_dataloader,
-                                        loss_functionn=loss_function,
+                                        loss_function=loss_function,
                                         accuracy_function=accuracy_function)
         
         results["test_losses"].append(test_loss)

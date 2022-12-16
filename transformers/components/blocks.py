@@ -74,16 +74,20 @@ class MLPBlock(nn.Module):
         """
         super(MLPBlock, self).__init__()
 
-        # Setting the dropout rate as an instance attr.
-        self.dropout = dropout
-
         # Creating the first linear layer.
-        self.extend_layer = nn.Linear(in_features=output_dim,
-                                      out_features=extend_dim)
+        self.extend_layer = nn.Sequential(
+            nn.Linear(in_features=output_dim,
+                      out_features=extend_dim),
+            nn.Dropout(p=dropout),
+            nn.ReLu()
+        )
 
         # Creating the output linear layer.
-        self.output_layer = nn.Linear(in_features=extend_dim,
-                                      out_features=output_dim)
+        self.output_layer = nn.Sequential(
+            nn.Linear(in_features=extend_dim, 
+                      out_features=output_dim),
+            nn.Dropout(p=dropout)
+        )
 
         # Creating the layer norm module.
         self.layer_norm = nn.LayerNorm(normalized_shape=output_dim)
@@ -91,10 +95,10 @@ class MLPBlock(nn.Module):
     def forward(self,
                 x: torch.tensor) -> torch.tensor:
         # Performing the first linear layer and it's dropout.
-        output = F.dropout(F.relu(self.extend_layer(x)), p=self.dropout)
+        output = self.extend_layer(x)
 
         # Performing output linear layer and it's dropout.
-        output = F.dropout(self.output_layer(output), p=self.dropout)
+        output = self.output_layer(output)
 
         # Performing the residual connection and layer normalization.
         return self.layer_norm(output + x)
@@ -114,13 +118,16 @@ class FnetBlock(nn.Module):
             torch.nn.Module: PyTorch Module.
         """
         super(FnetBlock, self).__init__()
-
-        # Setting the dropout as an instance attr.
-        self.dropout = dropout
+        
+        # Create a dropoutlayer
+        self.dropout = nn.Dropout(p=dropout)
 
         # Creating the output linear layer.
-        self.output_layer = nn.Linear(in_features=output_dim,
-                                      out_features=output_dim)
+        self.output_layer = nn.Sequential(
+            nn.Linear(in_features=output_dim, 
+                      out_features=output_dim),
+            nn.Dropout(p=dropout)
+        )
 
         # Creating the layer norm module.
         self.layer_norm = nn.LayerNorm(normalized_shape=output_dim)
@@ -128,10 +135,10 @@ class FnetBlock(nn.Module):
     def forward(self,
                 x: torch.tensor) -> torch.tensor:
         # Performing the fft2d and it's dropout.
-        output = F.dropout(torch.real(torch.fft.fft2(x)), p=self.dropout)
+        output = self.dropout(torch.real(torch.fft.fft2(x)))
 
         # Perfroming the output layer and it's dropout.
-        output = F.dropout(self.output_layer(output), p=self.dropout)
+        output = self.output_layer(output)
 
         # Performing the residual connection and layer normalization.
         return self.layer_norm(output + x)
@@ -155,11 +162,14 @@ class FnetCNNBlock(nn.Module):
         super(FnetCNNBlock, self).__init__()
 
         # Set the dropout rate as an instance attr.
-        self.dropout = dropout
+        self.dropout = nn.Dropout(p=dropout)
 
         # Creating the output linear layer.
-        self.output_layer = nn.Linear(in_features=output_dim,
-                                      out_features=output_dim)
+        self.output_layer = nn.Sequential(
+            nn.Linear(in_features=output_dim, 
+                      out_features=output_dim),
+            nn.Dropout(p=dropout)
+        )
 
         # Creating the conv block. this block is responsable to
         # shrink tokens to half.
@@ -171,7 +181,8 @@ class FnetCNNBlock(nn.Module):
                       padding="same"),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2,
-                         stride=2)
+                         stride=2),
+            nn.Dropout(p=dropout)
         )
 
         # Creating the layer norm module.
@@ -180,21 +191,21 @@ class FnetCNNBlock(nn.Module):
     def forward(self,
                 x: torch.tensor) -> torch.tensor:
         # Performing the fft2 and it's dropout.
-        output = F.dropout(torch.real(torch.fft.fft2(x)), p=self.dropout)
+        output = self.dropout(torch.real(torch.fft.fft2(x)))
 
         # Permute the fft2 output to put it into
         # shape: [batch, channel, tokens] -> [batch, model_dim, num_tokens]
         output = output.permute(0, 2, 1)
 
         # Performing the CNN block and it's dropout.
-        output = F.dropout(self.cnn_block(output), p=self.dropout)
+        output = self.cnn_block(output)
 
         # Permute the CNN block output to put it into
         # sahpe: [batch, tokens, channel] -> [batch, num_tokens, model_dim]
         output = output.permute(0, 2, 1)
 
         # Perform the output linear layer and it's dropout
-        output = F.dropout(self.output_layer(output), p=self.dropout)
+        output = self.output_layer(output)
 
         # Perform a layer normalizatoin, residual connection cand be doen
         # cause the input and output shaps are different.
