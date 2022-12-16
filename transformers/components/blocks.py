@@ -79,7 +79,7 @@ class MLPBlock(nn.Module):
             nn.Linear(in_features=output_dim,
                       out_features=extend_dim),
             nn.Dropout(p=dropout),
-            nn.ReLu()
+            nn.ReLU()
         )
 
         # Creating the output linear layer.
