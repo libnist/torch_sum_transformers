@@ -61,7 +61,6 @@ def train_step(model: torch.nn.Module,
 
         # Summary targets
         sum_target_tokens = y[:, 0, 1:]  # [batch_size, sum_seq_len]
-        sum_target_token_types = y[:, 1, 1:]  # [batch_size, sum_seq_len]
 
         # Forward pass
         # The output is in shape:
@@ -88,10 +87,7 @@ def train_step(model: torch.nn.Module,
         loss.backward()
         optimizer.step()
 
-        # accuracy = accuracy_function(sum_pred_outputs, sum_target_tokens)
-        accuracy = (torch.sum(sum_preds == sum_target_tokens) /
-                    torch.numel(sum_preds))
-        
+        accuracy = accuracy_function(sum_preds, sum_target_tokens)
         train_acc += accuracy.item()
 
         if not batch % batch_verbose:
@@ -144,10 +140,9 @@ def test_step(model: torch.nn.Module,
 
             # summary tokens
             sum_input_tokens = y[:, 0, :-1]
-            sum_input_token_types = y[:, 0, :-1]
+            sum_input_token_types = y[:, 1, :-1]
 
             sum_target_tokens = y[:, 0, 1:]
-            sum_target_token_types = y[:, 1, 1:]
 
             # Forward pass
             sum_pred_outputs = model(document_tokens=doc_tokens,
@@ -167,9 +162,7 @@ def test_step(model: torch.nn.Module,
             loss = loss_function(sum_pred_outputs, sum_target_tokens)
             test_loss += loss.item()
 
-            # accuracy = accuracy_function(sum_pred_outputs, sum_target_tokens)
-            accuracy = (torch.sum(sum_preds == sum_target_tokens) /
-                        torch.numel(sum_preds))
+            accuracy = accuracy_function(sum_preds, sum_target_tokens)
             test_acc += accuracy.item()
 
     test_loss /= len(dataloader.dataset)
