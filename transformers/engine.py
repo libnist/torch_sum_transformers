@@ -12,10 +12,10 @@ from collections import defaultdict
 
 
 def train_step(model: torch.nn.Module,
-               dataloader: torch.utls.data.DataLoader,
+               dataloader: torch.utils.data.DataLoader,
                loss_function: torch.nn.Module,
                accuracy_function: FunctionType,
-               optimizer: torch.optim.Optimizers,
+               optimizer: torch.optim.Optimizer,
                batch_verbose: int = 100) -> Tuple[float, float]:
     """Performs one epoch.
 
@@ -80,7 +80,7 @@ def train_step(model: torch.nn.Module,
         sum_preds = torch.argmax(sum_pred_probs, dim=-1)
 
         # Calculating loss
-        loss = loss_function(sum_pred_outputs, sum_target_token_types)
+        loss = loss_function(sum_pred_outputs, sum_target_tokens)
         train_loss += loss.item()
 
         # Bacward pass and updating weights
@@ -89,17 +89,20 @@ def train_step(model: torch.nn.Module,
         optimizer.step()
 
         # accuracy = accuracy_function(sum_pred_outputs, sum_target_tokens)
-        accuracy = torch.sum(sum_preds == sum_target_tokens)
-        accuracy /= torch.numel(sum_preds)
+        accuracy = (torch.sum(sum_preds == sum_target_tokens) /
+                    torch.numel(sum_preds))
+        
         train_acc += accuracy.item()
 
         if not batch % batch_verbose:
-            loss_to_print = loss.item() / (batch_size * batch)
-            accuracy_to_print = accuracy.item() / (batch_size * batch)
-            print(f"\tBatch {batch} of {num_batches} or {batch/num_batches}% \
-                of the epcch: ", end="")
-            print(f"Train Loss: {loss_to_print:4.4f} | \
-                Train Accuracy: {accuracy_to_print:4.4f}")
+            loss_to_print = loss.item() / (batch_size * (batch + 1))
+            accuracy_to_print = accuracy.item() / (batch_size * (batch + 1))
+            
+            print(f"\tBatch {batch} of {num_batches:.2f}" +
+                  f" or {batch/num_batches}% of the epcch: ", end="")
+            
+            print(f"Train Loss: {loss_to_print:4.4f} |  " + 
+                  f"Train Accuracy: {accuracy_to_print:4.4f}")
 
     train_loss /= len(dataloader.dataset)
     train_acc /= len(dataloader.dataset)
@@ -107,7 +110,7 @@ def train_step(model: torch.nn.Module,
 
 
 def test_step(model: torch.nn.Module,
-              dataloader: torch.utls.data.DataLoader,
+              dataloader: torch.utils.data.DataLoader,
               loss_function: torch.nn.Module,
               accuracy_function: FunctionType) -> Tuple[float, float]:
     """Performs one validation step on validation or test dataset.
@@ -161,29 +164,29 @@ def test_step(model: torch.nn.Module,
             sum_preds = torch.argmax(sum_pred_probs, dim=-1)
 
             # Calculating loss
-            loss = loss_function(sum_pred_outputs, sum_target_token_types)
+            loss = loss_function(sum_pred_outputs, sum_target_tokens)
             test_loss += loss.item()
 
             # accuracy = accuracy_function(sum_pred_outputs, sum_target_tokens)
-            accuracy = torch.sum(sum_preds == sum_target_tokens)
-            accuracy /= torch.numel(sum_preds)
+            accuracy = (torch.sum(sum_preds == sum_target_tokens) /
+                        torch.numel(sum_preds))
             test_acc += accuracy.item()
 
     test_loss /= len(dataloader.dataset)
     test_acc /= len(dataloader.dataset)
 
-    print(f"\t\tValidation Loss: {test_loss:4.4f} | \
-        Validation Acc: {test_acc:4.4f}")
+    print(f"\t\tValidation Loss: {test_loss:4.4f} | " + 
+          f"Validation Acc: {test_acc:4.4f}")
 
     return test_loss, test_acc
 
 
 def train(model: torch.nn.Module,
-          train_dataloader: torch.utls.data.DataLoader,
-          test_dataloader: torch.utls.data.DataLoader,
+          train_dataloader: torch.utils.data.DataLoader,
+          test_dataloader: torch.utils.data.DataLoader,
           loss_function: torch.nn.Module,
           accuracy_function: FunctionType,
-          optimizer: torch.optim.Optimzier,
+          optimizer: torch.optim.Optimizer,
           epochs: int,
           device: str) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.

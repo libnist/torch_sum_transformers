@@ -102,7 +102,8 @@ class FnetCNNTranformer(nn.Module):
                                       token_types=document_token_types)
         
         # Pass summaries and encoder_outputs to our decoder
-        attn_mask = self.get_attn_mask(summary_tokens.shape[-1])
+        attn_mask = self.get_attn_mask(summary_tokens.shape[-1],
+                                       summary_tokens.device)
         decoder_outputs = self.decoder(tokens=summary_tokens,
                                        token_types=summary_token_types,
                                        encoder_output=encoder_output,
@@ -112,10 +113,10 @@ class FnetCNNTranformer(nn.Module):
         return self.output_layer(decoder_outputs)
     
     @staticmethod
-    def get_attn_mask(summary_tokens_shape) -> torch.tensor:
+    def get_attn_mask(summary_tokens_shape, device) -> torch.tensor:
         attn_mask = np.triu(
             m=np.ones((summary_tokens_shape,
                        summary_tokens_shape), dtype=bool),
             k=1
         )
-        return torch.tensor(attn_mask)
+        return torch.tensor(attn_mask).to(device)

@@ -54,7 +54,7 @@ class TripleEmbeddingBlock(nn.Module):
         # Add all the embeddings to produce the output tensor
         return (word_embedding + 
                 type_embedding + 
-                self.positional_embedding[0, :token_length, :])
+                self.positional_embedding[:, :token_length, :])
 
 
 class MLPBlock(nn.Module):
@@ -205,9 +205,7 @@ class MHABlock(nn.Module):
     def __init__(self,
                  embed_dim: int,
                  num_heads: int,
-                 dropout: float,
-                 kdim: int = None,
-                 vdim: int = None) -> torch.nn.Module:
+                 dropout: float) -> torch.nn.Module:
         """Return the vanilla MultiheadSelfAttention block.
 
         Args:
@@ -224,15 +222,10 @@ class MHABlock(nn.Module):
         """
         super(MHABlock, self).__init__()
 
-        # Setting the dropout rate as an instance attr.
-        self.dropout = dropout
-
         # Creating the MultiheadSelfAttention module.
         self.mha = nn.MultiheadAttention(embed_dim=embed_dim,
                                          num_heads=num_heads,
                                          dropout=dropout,
-                                         kdim=kdim,
-                                         vdim=vdim,
                                          batch_first=True)
 
         # Creating the layer norm module.
