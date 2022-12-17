@@ -12,3 +12,4 @@ def cross_entropy_loss(y_pred: torch.tensor,
     categorical_y_true = F.one_hot(y_true, vocab_size).float()
     loss =  cross_entropy(y_pred, categorical_y_true)
     loss = (loss.sum(dim=-1)/63).sum()
+    return loss
