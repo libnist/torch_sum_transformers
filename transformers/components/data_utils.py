@@ -108,7 +108,7 @@ class DocumentSummaryDataset(Dataset):
         elif shape[-1] > max_tokens:
             encoded = encoded[:, :max_tokens]
 
-        return torch.tensor(encoded, dtype=torch.int).to(self._device)
+        return torch.tensor(encoded, dtype=torch.int64).to(self._device)
 
     def __getitem__(self,
                     index: int):
