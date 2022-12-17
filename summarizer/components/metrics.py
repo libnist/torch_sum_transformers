@@ -1,15 +1,17 @@
 # Import libs
 import torch
 from torch import nn
-import torch.nn.functional as F
 
-cross_entropy = nn.CrossEntropyLoss(reduction="none")
+nllloss = nn.NLLLoss()
 
 # Cross entropy loss
-def cross_entropy_loss(y_pred: torch.tensor,
-                       y_true: torch.tensor,
-                       vocab_size: int):
-    categorical_y_true = F.one_hot(y_true, vocab_size).float()
-    loss =  cross_entropy(y_pred, categorical_y_true)
-    loss = (loss.sum(dim=-1)/63).sum()
+
+
+def nll_loss(y_pred: torch.tensor,
+             y_true: torch.tensor):
+    loss = nllloss(torch.log(torch.softmax(y_pred[0], dim=-1)),
+                   y_true[0])
+    for i in range(1, y_pred.shape[0]):
+        loss += nllloss(torch.log(torch.softmax(y_pred[i], dim=-1)),
+                        y_true[i])
     return loss
