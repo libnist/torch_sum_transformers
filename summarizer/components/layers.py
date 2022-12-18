@@ -7,7 +7,8 @@ from .blocks import (
     FnetCNNBlock,
     MHABlock,
     MLPBlock,
-    TripleEmbeddingBlock
+    TripleEmbeddingBlock,
+    FnetBlock
 )
 
 
@@ -49,6 +50,39 @@ class FnetCNNEncoderLayer(nn.Module):
         # Pass the input through MLP block.
         return self.mlp_block(output)
 
+class FnetEncoderLayer(nn.Module):
+    def __init__(self,
+                 model_dim: int,
+                 extend_dim: int,
+                 dropout: float = .5) -> torch.nn.Module:
+        """Returns an encoder layer consist of FnetBlock in order to shrink
+        the input tokens.
+
+        Args:
+            model_dim (int): Dimension of the model.
+            extend_dim (int): Dimension of the first linear layer in MLP block.
+            dropout (float, optional): Dropout rate. Defaults to .5.
+        Returns:
+            FnetEncoderLayer: torch.nn.Module
+        """
+        super().__init__()
+
+        self.fnet_block = FnetBlock(
+            output_dim=model_dim,
+            dropout=dropout)
+
+        self.mlp_block = MLPBlock(extend_dim=extend_dim,
+                                  output_dim=model_dim,
+                                  dropout=dropout)
+
+    def forward(self,
+                x: torch.tensor) -> torch.tensor:
+
+        # Pass the input through FnetBlock.
+        output = self.fnet_block(x)
+
+        # Pass the input through MLP block.
+        return self.mlp_block(output)
 
 class DecoderLayer(nn.Module):
     def __init__(self,

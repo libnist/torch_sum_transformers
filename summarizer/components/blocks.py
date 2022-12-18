@@ -50,7 +50,7 @@ class TripleEmbeddingBlock(nn.Module):
         
         # Perform type embeddings.
         type_embedding = self.type_embedding(token_types)
-        
+                
         # Add all the embeddings to produce the output tensor
         return (word_embedding + 
                 type_embedding + 
