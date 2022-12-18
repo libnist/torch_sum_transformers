@@ -65,10 +65,10 @@ def train_step(model: torch.nn.Module,
         # Forward pass
         # The output is in shape:
         # [batch_size, summary_token_length, sum_vocab_size]
-        sum_pred_outputs = model(document_tokens=doc_tokens,
-                                 document_token_types=doc_token_types,
-                                 summary_tokens=sum_input_tokens,
-                                 summary_token_types=sum_input_token_types)
+        sum_pred_outputs = model(doc_tokens,
+                                 doc_token_types,
+                                 sum_input_tokens,
+                                 sum_input_token_types)
 
         # Calculating probs, output_shape:
         # [batch_size, summary_token_length, sum_vocab_size]
@@ -145,10 +145,10 @@ def test_step(model: torch.nn.Module,
             sum_target_tokens = y[:, 0, 1:]
 
             # Forward pass
-            sum_pred_outputs = model(document_tokens=doc_tokens,
-                                     document_token_types=doc_token_types,
-                                     summary_tokens=sum_input_tokens,
-                                     summary_token_types=sum_input_token_types)
+            sum_pred_outputs = model(doc_tokens,
+                                     doc_token_types,
+                                     sum_input_tokens,
+                                     sum_input_token_types)
 
             # Calculating probs, output_shape:
             # [batch_size, summary_token_length, sum_vocab_size]
