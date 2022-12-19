@@ -59,7 +59,7 @@ class FnetCNNTranformer(nn.Module):
             fnet_cnn_kernel_size=fnet_cnn_kernel_size,
             dropout=dropout
         )
-
+        
         # Create the Decoder
         self.decoder = Decoder(
             num_layers=dec_num_layers,
@@ -77,10 +77,10 @@ class FnetCNNTranformer(nn.Module):
                                       out_features=summary_vocab_size)
 
     def forward(self,
-                document_tokens: torch.tensor,
-                document_token_types: torch.tensor,
-                summary_tokens: torch.tensor,
-                summary_token_types: torch.tensor) -> torch.tensor:
+                doc_tokens: torch.tensor,
+                doc_token_types: torch.tensor,
+                sum_tokens: torch.tensor,
+                sum_token_types: torch.tensor) -> torch.tensor:
         """Forward pass of the FnetCNNTransformer model.
 
         Args:
@@ -98,14 +98,14 @@ class FnetCNNTranformer(nn.Module):
         """
         
         # Pass documents through our encoder
-        encoder_output = self.encoder(tokens=document_tokens,
-                                      token_types=document_token_types)
+        encoder_output = self.encoder(tokens=doc_tokens,
+                                      token_types=doc_token_types)
         
         # Pass summaries and encoder_outputs to our decoder
-        attn_mask = self.get_attn_mask(summary_tokens.shape[-1],
-                                       summary_tokens.device)
-        decoder_outputs = self.decoder(tokens=summary_tokens,
-                                       token_types=summary_token_types,
+        attn_mask = self.get_attn_mask(sum_tokens.shape[-1],
+                                       sum_tokens.device)
+        decoder_outputs = self.decoder(tokens=sum_tokens,
+                                       token_types=sum_token_types,
                                        encoder_output=encoder_output,
                                        attn_mask=attn_mask)
         

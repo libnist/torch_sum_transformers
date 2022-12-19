@@ -18,7 +18,7 @@ class FnetCNNEncoderLayer(nn.Module):
                  extend_dim: int,
                  fnet_cnn_kernel_size: int,
                  dropout: float = .5) -> torch.nn.Module:
-        """Returns an encoder layer consist of FnetCNNBlock in order to shrink
+        """Returns an encoder layer comprised of FnetCNNBlock in order to shrink
         the input tokens.
 
         Args:
@@ -55,8 +55,7 @@ class FnetEncoderLayer(nn.Module):
                  model_dim: int,
                  extend_dim: int,
                  dropout: float = .5) -> torch.nn.Module:
-        """Returns an encoder layer consist of FnetBlock in order to shrink
-        the input tokens.
+        """Returns an encoder layer comprised of FnetBlock.
 
         Args:
             model_dim (int): Dimension of the model.
@@ -89,7 +88,18 @@ class DecoderLayer(nn.Module):
                  model_dim: int,
                  num_heads: int,
                  extend_dim: int,
-                 dropout: float) -> torch.nn.Module:
+                 dropout: float = .5) -> torch.nn.Module:
+        """Return a VanillaDecoder Layer.
+
+        Args:
+            model_dim (int): Dimension of the model.
+            num_heads (int): Num heads used in MHA block.
+            extend_dim (int): Dimenstion used in the first layer if mlp block.
+            dropout (float, optional): Dropout rate. Default to .5.
+            
+        Returns:
+            torch.nn.Module: PyTorch Module.
+        """
         super().__init__()
 
         # Creating the MHA block that perfroms on decoder input.
@@ -140,10 +150,10 @@ class FnetCNNEncoder(nn.Module):
                  sequence_len: int,
                  fnet_cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> torch.nn.Module:
-        """Return an FnetCNNEncoder with `num_layers` of FnetCNNEncoderLayer.
+        """Return an FnetCNNEncoder with `num_layers` of FnetEncoderLayer.
 
         Args:
-            num_layers (int): Number of FnetCNNEncoderLayers.
+            num_layers (int): Number of FnetEncoderLayers.
             model_dim (int): Dimension of the model.
             extend_dim (int): Dimension of the firt linear layer in MLP block.
             num_word_embeddings (int): Input documents vocabulary size.
@@ -181,16 +191,6 @@ class FnetCNNEncoder(nn.Module):
     def forward(self,
                 tokens: torch.tensor,
                 token_types: torch.tensor) -> torch.tensor:
-        """Forward pass of the FnetCNNEncoder.
-
-        Args:
-            tokens (torch.tensor): Tokens of input documents.
-            token_types (torch.tensor): Type tokens of input documents.
-
-        Returns:
-            torch.tensor: Output of FnetCNNEncoder.
-        """
-
         # Perform the embeddings
         x = self.embedding(tokens, token_types)
 

@@ -18,6 +18,24 @@ class Transformer(nn.Module):
                  sum_max_num_sentences: int,
                  sum_seq_len: int,
                  dropout: int = .5):
+        """Return a VanillaTransformer.
+
+        Args:
+            d_model (int): Dimension of the model.
+            nhead (int): Number of heads used in MHA block.
+            dim_feedforward (int): Dimenstion of the first layer of the mlp 
+            block.
+            num_layers (int): Number of stacked layers.
+            doc_vocab_size (int): Documents vocabulary size.
+            doc_max_num_sentences (int): Maximum number of sentences in a 
+            document.
+            doc_seq_len (int): Maximum length of the tokens in input documents.
+            sum_vocab_size (int): Summary vocabulary size.
+            sum_max_num_sentences (int): Maximum number of sentences in a
+            summary.
+            sum_seq_len (int): Maximum length of the tokens in input summaries.
+            dropout (int, optional): Dropout rate. Defaults to .5.
+        """
         super().__init__()
         
         # Create embedding blocks

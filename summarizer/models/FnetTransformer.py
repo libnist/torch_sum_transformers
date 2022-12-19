@@ -21,6 +21,24 @@ class FnetTransformer(nn.Module):
                  max_num_sum_sentences: int,
                  sum_seq_len: int,
                  dropout: float = .5):
+        """Returns a Fnet Transformer model.
+
+        Args:
+            d_model (int): Dimension of the model.
+            dim_feedforward (int): Dimension used in the first layer of the mlp
+            block.
+            nhead (int): Number of heads used in MHA block.
+            num_layers (int): Number of layers for encoder and decoder layers.
+            doc_vocab_size (int): Documents vocabulary size.
+            max_num_doc_sentences (int): Maximum number of sentences in a
+            document.
+            doc_seq_len (int): Length of the input document tokens.
+            sum_vocab_size (int): Summaries vocabulary size.
+            max_num_sum_sentences (int): Maximum number of sentensces in a
+            summary.
+            sum_seq_len (int): Length of the inpu summary tokens.
+            dropout (float, optional): Dropout rate. Defaults to .5.
+        """
         super().__init__()
 
         # Create embedding blocs

@@ -4,14 +4,11 @@ from datasets import load_dataset, load_dataset_builder
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-from typing import List
+from typing import List, Tuple
 
 from . import tokenizer
 import numpy as np
 import os
-
-# The fucntion below prints a given datasets description
-
 
 def description(name: str,
                 version: str = "3.0.0") -> None:
@@ -23,8 +20,6 @@ def description(name: str,
     """
     builder = load_dataset_builder(path=name, version=version)
     print(builder.info.description)
-
-# The function below downloads a split of a given dataset
 
 
 def get_data(path: str,
@@ -40,7 +35,7 @@ def get_data(path: str,
         version (str, optional): version of the dataset. Defaults to "3.0.0".
 
     Returns:
-        _type_: datasets.arrow_dataset.Dataset
+        datasets.arrow_dataset.Dataset: A hugging face dataset.
     """
     return load_dataset(path=path,
                         split=split,
@@ -90,13 +85,25 @@ class DocumentSummaryDataset(Dataset):
 
         self._device = device
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self._len_documents
 
     def encode_input(self,
                      input: str,
                      tokenizer: tokenizer,
-                     max_tokens: int):
+                     max_tokens: int) -> torch.tensor:
+        """Return tokenized input with it's given tokenizer.
+
+        Args:
+            input (str): An string input.
+            tokenizer (tokenizer): Tokenizer used to tokenize the input.
+            max_tokens (int): Maximum number of tokens to return. if the
+            tokens length are longer than max_tokens it cuts them, and if
+            they're shorter in fills them with [FILL] special token. 
+
+        Returns:
+            torch.tensor: A tokenized input.
+        """
         encoded = tokenizer.encode(input)
         encoded = np.array(encoded)
 
@@ -111,7 +118,16 @@ class DocumentSummaryDataset(Dataset):
         return torch.tensor(encoded, dtype=torch.int64).to(self._device)
 
     def __getitem__(self,
-                    index: int):
+                    index: int) -> Tuple[torch.tensor, torch.tensor]:
+        """Return the document and it's corresponing summary at location
+        `index`.
+
+        Args:
+            index (int): index of the input document and it's summary.
+
+        Returns:
+            Tuple[torch.tensor, torch.tensor]: One Document and it's summary.
+        """
         encoded_document = self.encode_input(self._documents[index],
                                              self._document_tokenizer,
                                              self._document_max_tokens)
@@ -131,22 +147,22 @@ def get_dataloader(documents: List[str],
                    batch_size: int, device: str,
                    num_workers: int = os.cpu_count(),
                    shuffle: bool = False) -> torch.utils.data.DataLoader:
-    """_summary_
+    """Creates a torch DataLoader from input documents and summaries.
 
     Args:
-        documents (List[str]): _description_
-        summaries (List[str]): _description_
-        document_tokenizer (tokenizer): _description_
-        summary_tokenizer (tokenizer): _description_
-        document_max_tokens (int): _description_
-        summary_max_tokens (int): _description_
-        batch_size (int): _description_
-        device (str): _description_
-        shuffle (bool, optional): _description_. Defaults to False.
-        num_workers (int, optional): _description_. Defaults to os.cpu_count().
+        documents (List[str]): A list containing input documents.
+        summaries (List[str]): A list containing input summaries.
+        document_tokenizer (tokenizer): Tokenizer used to tokenize documents.
+        summary_tokenizer (tokenizer): Tokenizer used to tokenize summaries.
+        document_max_tokens (int): Maximum number of tokens to return.
+        summary_max_tokens (int): Maximum number of tokens to return.
+        batch_size (int): Batch size.
+        device (str): Device.
+        shuffle (bool, optional): Shuffle. Defaults to False.
+        num_workers (int, optional): Num workers. Defaults to os.cpu_count().
 
     Returns:
-        _type_: torch.utils.data.DataLoader
+        torch.utils.data.DataLoader: A torch DataLoader.
     """
     dataset = DocumentSummaryDataset(documents=documents,
                                      summaries=summaries,

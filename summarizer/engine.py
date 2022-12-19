@@ -8,6 +8,10 @@ from types import FunctionType
 
 from collections import defaultdict
 
+import pathlib
+
+from .components.save_and_load import save_model
+
 # Train step
 
 
@@ -42,7 +46,6 @@ def train_step(model: torch.nn.Module,
     # Initializing loss and accuracy values
     train_loss, train_acc = 0, 0
 
-    batch_size = dataloader.batch_size
     num_batches = len(dataloader)
 
     # device of the dataloader is already set.
@@ -90,18 +93,19 @@ def train_step(model: torch.nn.Module,
         accuracy = accuracy_function(sum_preds, sum_target_tokens)
         train_acc += accuracy.item()
 
-        if not batch % batch_verbose:
-            loss_to_print = train_loss / (batch_size * (batch + 1))
-            accuracy_to_print = train_acc / (batch_size * (batch + 1))
+        if (((not batch % batch_verbose) and batch != 0) 
+            or (batch == num_batches)):
+            loss_to_print = train_loss / batch
+            accuracy_to_print = train_acc / batch
             
             print(f"\tBatch {batch} of {num_batches}" +
-                  f" or {batch/num_batches*100:.2f}% of the epochs: ", end="")
+                  f"'{batch/num_batches*100:.4.2f}%':\t", end="")
             
             print(f"Train Loss: {loss_to_print:8.4f} |  " + 
                   f"Train Accuracy: {accuracy_to_print:8.4f}")
 
-    train_loss /= len(dataloader.dataset)
-    train_acc /= len(dataloader.dataset)
+    train_loss /= num_batches
+    train_acc /= num_batches
     return (train_loss, train_acc)
 
 
@@ -164,11 +168,12 @@ def test_step(model: torch.nn.Module,
 
             accuracy = accuracy_function(sum_preds, sum_target_tokens)
             test_acc += accuracy.item()
+    
+    num_batches = len(dataloader)
+    test_loss /= num_batches
+    test_acc /= num_batches
 
-    test_loss /= len(dataloader.dataset)
-    test_acc /= len(dataloader.dataset)
-
-    print(f"\t\tValidation Loss: {test_loss:4.4f} | " + 
+    print(f"{'-'*10}>Validation Loss: {test_loss:4.4f} | " + 
           f"Validation Acc: {test_acc:4.4f}")
 
     return test_loss, test_acc
@@ -181,7 +186,10 @@ def train(model: torch.nn.Module,
           accuracy_function: FunctionType,
           optimizer: torch.optim.Optimizer,
           epochs: int,
-          device: str) -> Dict[str, list]:
+          device: str,
+          lr_scheduler = None,
+          path: pathlib.Path = None ,
+          model_name: str = None) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.
 
     Args:
@@ -201,8 +209,11 @@ def train(model: torch.nn.Module,
         device (str): The device in which we need to put our tensors in.
 
     Returns:
-        Dict[str, list]: _description_
+        Dict[str, list]: A dictionary contaning training results.
     """
+    
+    if path:
+        assert model_name is not None, "Define model_name parameter."
     
     # The dictionary below will containg all the loss and accuracy
     # reports from the training proccess
@@ -222,6 +233,13 @@ def train(model: torch.nn.Module,
         
         results["train_losses"].append(train_loss)
         results["train_accuracies"].append(train_acc)
+        
+        if path:
+            save_model(model=model,
+                       path=path,
+                       name=model_name,
+                       optimizer=optimizer,
+                       lr_scheduler=lr_scheduler)
 
         test_loss, test_acc = test_step(model=model,
                                         dataloader=test_dataloader,
