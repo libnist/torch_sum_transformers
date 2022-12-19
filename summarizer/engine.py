@@ -233,6 +233,9 @@ def train(model: torch.nn.Module,
                                            accuracy_function=accuracy_function,
                                            optimizer=optimizer)
         
+        if lr_scheduler:
+            lr_scheduler.step()
+        
         results["train_losses"].append(train_loss)
         results["train_accuracies"].append(train_acc)
         

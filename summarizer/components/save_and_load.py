@@ -26,14 +26,14 @@ def save_model(model: torch.nn.Module,
     lr_scheduler_path = path / (name + "lr_scheduler.pth")
     
     torch.save(model.state_dict(), model_path)
-    print("\tModel is saved in: {model_path}")
+    print(f"\tModel is saved in: {model_path}")
     
     if optimizer:
         torch.save(optimizer.state_dict(), optimizer_path)
-        print("\tModels optimizer is saved in: {optimizer_path}")
+        print(f"\tModels optimizer is saved in: {optimizer_path}")
         if lr_scheduler:
             torch.save(lr_scheduler.state_dict(), lr_scheduler_path)
-            print("\tOptimizers lr_scheduler is saved in: {lr_scheduler_path}")
+            print(f"\tOptimizers lr_scheduler is saved in: {lr_scheduler_path}")
             
 def load_model(model: torch.nn.Module,
                path: pathlib.Path,
@@ -58,11 +58,11 @@ def load_model(model: torch.nn.Module,
     
     model.load_state_dict(torch.load(model_path))
     model.to(device)
-    print("\tModel is loaded from: {model_path}")
+    print(f"\tModel is loaded from: {model_path}")
     
     if optimizer:
         optimizer.load_state_dict(torch.load(optimizer_path))
-        print("\tOptimizer is loaded from: {optimizer_path}")
+        print(f"\tOptimizer is loaded from: {optimizer_path}")
         if lr_scheduler:
             lr_scheduler.load_state_dict(torch.load(lr_scheduler_path))
-            print("\tlr_scheduler is loaded from: {lr_scheduler_path}")
+            print(f"\tlr_scheduler is loaded from: {lr_scheduler_path}")
