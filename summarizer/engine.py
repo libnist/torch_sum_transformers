@@ -50,6 +50,8 @@ def train_step(model: torch.nn.Module,
 
     # device of the dataloader is already set.
     for batch, (X, y) in enumerate(dataloader):
+        
+        batch += 1
 
         # Getting data in the form of the models input
         # Device is set w/ dataset initialization
@@ -93,13 +95,13 @@ def train_step(model: torch.nn.Module,
         accuracy = accuracy_function(sum_preds, sum_target_tokens)
         train_acc += accuracy.item()
 
-        if (((not batch % batch_verbose) and batch != 0) 
+        if ((not batch % batch_verbose) 
             or (batch == num_batches)):
             loss_to_print = train_loss / batch
             accuracy_to_print = train_acc / batch
             
-            print(f"\tBatch {batch} of {num_batches}" +
-                  f"'{batch/num_batches*100:.4.2f}%':\t", end="")
+            print(f"\tBatch {batch} of {num_batches}: " +
+                  f"'{batch/num_batches*100:4.2f}%':\t", end="")
             
             print(f"Train Loss: {loss_to_print:8.4f} |  " + 
                   f"Train Accuracy: {accuracy_to_print:8.4f}")

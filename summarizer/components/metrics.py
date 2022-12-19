@@ -32,3 +32,11 @@ def CELossWrapper(fn, nc):
             loss += fn(y_pred[i], one_hot(y_true[i], nc))
         return loss / batch_size
     return inner
+
+
+def accuracy(y_pred, y_true):
+  match_ = y_pred == y_true
+  mask = y_true != 0
+
+  match_ = match_ & mask 
+  return torch.sum(match_) / torch.sum(mask)

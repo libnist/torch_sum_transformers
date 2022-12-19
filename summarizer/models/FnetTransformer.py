@@ -4,7 +4,7 @@ from torch import nn
 
 from ..components.blocks import TripleEmbeddingBlock
 from ..components.layers import FnetEncoderLayer
-from .input_utils import get_attn_mask
+from ..components.input_utils import get_attn_mask
 
 
 class FnetTransformer(nn.Module):
