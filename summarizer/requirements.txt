@@ -1,3 +1,5 @@
 transformers
 datasets
 tokenizers
+wandb
+torchinfo
