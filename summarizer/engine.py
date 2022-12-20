@@ -12,6 +12,8 @@ import pathlib
 
 from .components.save_and_load import save_model
 
+import wandb
+
 # Train step
 
 
@@ -192,15 +194,13 @@ def train(model: torch.nn.Module,
           lr_scheduler = None,
           path: pathlib.Path = None ,
           model_name: str = None,
-          log_per_epoch: int = 100) -> Dict[str, list]:
+          log_per_epoch: int = 100,
+          wandb_config: dict = None) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.
 
     Args:
         model (torch.nn.Module): A summarization model.
         train_dataloader (torch.data.utils.DataLoader): Train dataloader
-        which returns documents and summaries in shape:
-        [batch_size, 2, sequence_len]
-        test_dataloader (torch.data.utils.DataLoader): Validation dataloader
         which returns documents and summaries in shape:
         [batch_size, 2, sequence_len]
         loss_function (torch.nn.Module): A loss function which returns a 
@@ -210,6 +210,19 @@ def train(model: torch.nn.Module,
         optimizer (torch.optim.Optimzier): Optimizer.
         epochs (int): Number of epochs.
         device (str): The device in which we need to put our tensors in.
+        test_dataloader (torch.data.utils.DataLoader, Optional):
+        Validation dataloader which returns documents and summaries in shape:
+        [batch_size, 2, sequence_len]
+        lr_scheduler (torch.optim.lr_scheduler, Optional): Learning rate
+        scheduler.
+        path (pathlib.Path, Optional): Saves the model, optimizer, and 
+        lr_scheduler in the given path.
+        model_name (str, Optional): Model will be saved under this name.
+        (if path is defined model_name should be defined too.)
+        log_per_epoch (int, Optional): Prints models log after each 
+        `log_per_epoch` time.
+        wandb_config (dict, Optional): In case of setting this parameter as
+        the training information. it will log our metrics into WandB.
 
     Returns:
         Dict[str, list]: A dictionary contaning training results.
@@ -217,6 +230,10 @@ def train(model: torch.nn.Module,
     
     if path:
         assert model_name is not None, "Define model_name parameter."
+        
+    if wandb_config:
+        wandb.init(project=model_name,
+                   config=wandb_config)
     
     # The dictionary below will containg all the loss and accuracy
     # reports from the training proccess
@@ -256,6 +273,13 @@ def train(model: torch.nn.Module,
             
             results["test_losses"].append(test_loss)
             results["test_accuracies"].append(test_acc)
+            
+        if wandb_config:
+            wandb.log({"train_loss": train_loss,
+                       "train_accuracy": train_acc})
+            if test_dataloader:
+                wandb.log({"test_loss": test_loss,
+                           "test_accuracy": test_acc})
         
     return results
         
