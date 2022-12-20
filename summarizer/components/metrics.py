@@ -2,7 +2,7 @@
 import torch
 from torch import nn
 
-from typing import FunctionType
+from types import FunctionType
 
 # Replication of SparseCategoricalCrossEnropy in keras, wrapper
 
