@@ -52,7 +52,7 @@ def train_step(model: torch.nn.Module,
 
     # device of the dataloader is already set.
     for batch, (X, y) in enumerate(dataloader):
-        
+
         batch += 1
 
         # Getting data in the form of the models input
@@ -97,15 +97,15 @@ def train_step(model: torch.nn.Module,
         accuracy = accuracy_function(sum_preds, sum_target_tokens)
         train_acc += accuracy.item()
 
-        if ((not batch % batch_verbose) 
-            or (batch == num_batches)):
+        if ((not batch % batch_verbose)
+                or (batch == num_batches)):
             loss_to_print = train_loss / batch
             accuracy_to_print = train_acc / batch
-            
+
             print(f"\tBatch {batch} of {num_batches}: " +
                   f"'{batch/num_batches*100:4.2f}%':\t", end="")
-            
-            print(f"Train Loss: {loss_to_print:8.4f} |  " + 
+
+            print(f"Train Loss: {loss_to_print:8.4f} |  " +
                   f"Train Accuracy: {accuracy_to_print:8.4f}")
 
     train_loss /= num_batches
@@ -172,12 +172,12 @@ def test_step(model: torch.nn.Module,
 
             accuracy = accuracy_function(sum_preds, sum_target_tokens)
             test_acc += accuracy.item()
-    
+
     num_batches = len(dataloader)
     test_loss /= num_batches
     test_acc /= num_batches
 
-    print(f"{'-'*10}>Validation Loss: {test_loss:4.4f} | " + 
+    print(f"{'-'*10}>Validation Loss: {test_loss:4.4f} | " +
           f"Validation Acc: {test_acc:4.4f}")
 
     return test_loss, test_acc
@@ -191,8 +191,8 @@ def train(model: torch.nn.Module,
           epochs: int,
           device: str,
           test_dataloader: torch.utils.data.DataLoader = None,
-          lr_scheduler = None,
-          path: pathlib.Path = None ,
+          lr_scheduler=None,
+          path: pathlib.Path = None,
           model_name: str = None,
           log_per_epoch: int = 100,
           wandb_config: dict = None) -> Dict[str, list]:
@@ -227,21 +227,21 @@ def train(model: torch.nn.Module,
     Returns:
         Dict[str, list]: A dictionary contaning training results.
     """
-    
+
     if path:
         assert model_name is not None, "Define model_name parameter."
-        
+
     if wandb_config:
         wandb.init(project=model_name,
                    config=wandb_config)
-    
+
     # The dictionary below will containg all the loss and accuracy
     # reports from the training proccess
     results = defaultdict(list)
-    
+
     # Putting our model into the predefined device
     model.to(device)
-    
+
     # Iterating as many epochs we need and updating our model weights.
     for epoch in tqdm(range(epochs)):
         print(f"Epoch {epoch+1} of {epochs}")
@@ -251,36 +251,35 @@ def train(model: torch.nn.Module,
                                            accuracy_function=accuracy_function,
                                            optimizer=optimizer,
                                            batch_verbose=log_per_epoch)
-        
+
         if lr_scheduler:
             lr_scheduler.step()
-        
+
         results["train_losses"].append(train_loss)
         results["train_accuracies"].append(train_acc)
-        
+
         if path:
             save_model(model=model,
                        path=path,
                        name=model_name,
                        optimizer=optimizer,
                        lr_scheduler=lr_scheduler)
-            
+
         if test_dataloader:
             test_loss, test_acc = test_step(model=model,
                                             dataloader=test_dataloader,
                                             loss_function=loss_function,
                                             accuracy_function=accuracy_function)
-            
+
             results["test_losses"].append(test_loss)
             results["test_accuracies"].append(test_acc)
-            
+
         if wandb_config:
-            wandb.log({"train_loss": train_loss,
-                       "train_accuracy": train_acc})
+            log = {"train_loss": train_loss,
+                   "train_accuracy": train_acc}
             if test_dataloader:
-                wandb.log({"test_loss": test_loss,
-                           "test_accuracy": test_acc})
-        
+                log.update({"test_loss": test_loss,
+                            "test_accuracy": test_acc})
+            wandb.log(log)
+
     return results
-        
-        
