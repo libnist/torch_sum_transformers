@@ -183,15 +183,16 @@ def test_step(model: torch.nn.Module,
 
 def train(model: torch.nn.Module,
           train_dataloader: torch.utils.data.DataLoader,
-          test_dataloader: torch.utils.data.DataLoader,
           loss_function: torch.nn.Module,
           accuracy_function: FunctionType,
           optimizer: torch.optim.Optimizer,
           epochs: int,
           device: str,
+          test_dataloader: torch.utils.data.DataLoader = None,
           lr_scheduler = None,
           path: pathlib.Path = None ,
-          model_name: str = None) -> Dict[str, list]:
+          model_name: str = None,
+          log_per_epoch: int = 100) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.
 
     Args:
@@ -231,7 +232,8 @@ def train(model: torch.nn.Module,
                                            dataloader=train_dataloader,
                                            loss_function=loss_function,
                                            accuracy_function=accuracy_function,
-                                           optimizer=optimizer)
+                                           optimizer=optimizer,
+                                           batch_verbose=log_per_epoch)
         
         if lr_scheduler:
             lr_scheduler.step()
@@ -245,14 +247,15 @@ def train(model: torch.nn.Module,
                        name=model_name,
                        optimizer=optimizer,
                        lr_scheduler=lr_scheduler)
-
-        test_loss, test_acc = test_step(model=model,
-                                        dataloader=test_dataloader,
-                                        loss_function=loss_function,
-                                        accuracy_function=accuracy_function)
-        
-        results["test_losses"].append(test_loss)
-        results["test_accuracies"].append(test_acc)
+            
+        if test_dataloader:
+            test_loss, test_acc = test_step(model=model,
+                                            dataloader=test_dataloader,
+                                            loss_function=loss_function,
+                                            accuracy_function=accuracy_function)
+            
+            results["test_losses"].append(test_loss)
+            results["test_accuracies"].append(test_acc)
         
     return results
         
