@@ -4,3 +4,4 @@ tokenizers
 wandb
 torchinfo
 evaluate
+rouge_score
