@@ -4,6 +4,8 @@ from torch import nn
 
 from types import FunctionType
 
+import evaluate
+
 # Replication of SparseCategoricalCrossEnropy in keras, wrapper
 
 
@@ -56,3 +58,5 @@ def accuracy(y_pred: torch.tensor,
 
     match_ = match_ & mask
     return torch.sum(match_) / torch.sum(mask)
+
+rouge = evaluate.load("rouge")

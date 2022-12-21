@@ -3,3 +3,4 @@ datasets
 tokenizers
 wandb
 torchinfo
+evaluate
