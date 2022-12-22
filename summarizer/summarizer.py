@@ -46,17 +46,21 @@ class Summarizer(nn.Module):
             encoder_input = encoder_input[:, :self.max_input_length]
 
         # 3. Turn our input to `torch.tensor` so it can be fed into the model.
-        encoder_input = (torch.tensor(encoder_input, dtype=torch.int64)
-                         .to(self.model.device))
+        encoder_input = self.torch_tensor(encoder_input)
 
         # 4. Divide the input into tokens and token types
-        input_tokens = encoder_input[0, :].unsqueeze(0)
-        input_token_types = encoder_input[1, :].unsqueeze(0)
+        input_tokens = encoder_input[:, 0, :]
+        input_token_types = encoder_input[:, 1, :]
 
         start = self.sum_tokenizer.token_to_id("[START]")
-        end = self.sum_tokenizer.token_to_id("[END]")
+        end_marks = ["[END]", "[FILL]"]
+        end = [self.sum_tokenizer.token_to_id(mark)
+               for mark in end_marks]
+        
 
-        dot = self.doc_tokenizer.token_to_id(".")
+        marks = ".?!"
+        type_changers = [self.sum_tokenizer.token_to_id(mark) 
+                         for mark in marks]
 
         output_tokens_list = [start]
         current_type = 0
@@ -74,15 +78,17 @@ class Summarizer(nn.Module):
                                     output_token_types_tensor)
 
             prediction = prediction[:, -1, :]
-            prediction_id = torch.argmax(torch.softmax(prediction), dim=-1)
+            prediction_id = torch.argmax(
+                torch.softmax(prediction),
+                dim=-1).item()
             output_tokens_list.append(prediction_id)
 
-            if prediction_id.item() == dot:
+            if prediction_id in type_changers:
                 current_type += 1
 
             output_token_types_list.append(current_type)
             
-            if prediction_id.item() == end:
+            if prediction_id in end:
                 break
         return self.sum_tokenizer.decode(output_tokens_list)
 
