@@ -1,1 +1,1 @@
-from .FnetCNN import FnetCNNTranformer
+from .FnetCNN import FnetCNNModel
