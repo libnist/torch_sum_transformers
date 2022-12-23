@@ -246,7 +246,7 @@ def train(model: torch.nn.Module,
     # make logs in Weights and Biases.
     if wandb_config:
         assert wandb_proj, "Define wandb_proj as the project name."
-        wandb.init(project=model_name,
+        wandb.init(project=wandb_proj,
                    config=wandb_config,
                    name=model_name)
 
