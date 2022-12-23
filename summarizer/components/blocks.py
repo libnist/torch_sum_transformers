@@ -41,7 +41,6 @@ class TripleEmbeddingBlock(nn.Module):
     def forward(self,
                 tokens: torch.tensor,
                 token_types: torch.tensor) -> torch.tensor:
-        
         # Getting the length of the input
         token_length = tokens.shape[-1]
         
@@ -173,12 +172,9 @@ class FnetCNNBlock(nn.Module):
 
     def forward(self,
                 x: torch.tensor) -> torch.tensor:
-        # Performing the fft2 and it's dropout.
-        output = self.dropout(torch.real(torch.fft.fft2(x)))
-
         # Permute the fft2 output to put it into
         # shape: [batch, channel, tokens] -> [batch, model_dim, num_tokens]
-        output = output.permute(0, 2, 1)
+        output = x.permute(0, 2, 1)
 
         # Performing the CNN block and it's dropout.
         output = self.cnn_block(output)
@@ -186,8 +182,11 @@ class FnetCNNBlock(nn.Module):
         # Permute the CNN block output to put it into
         # sahpe: [batch, tokens, channel] -> [batch, num_tokens, model_dim]
         output = output.permute(0, 2, 1)
+        
+        # Performing the fft2 and it's dropout.
+        output = self.dropout(torch.real(torch.fft.fft2(x)))
 
-        # Perform a layer normalizatoin, residual connection cand be doen
+        # Perform a layer normalizatoin, residual connection can't be done
         # cause the input and output shaps are different.
         return self.layer_norm(output)
 
@@ -227,7 +226,6 @@ class MHABlock(nn.Module):
                 key: torch.tensor,
                 value: torch.tensor,
                 attn_mask: torch.tensor = None) -> torch.tensor:
-
         # Performing MHSA.
         output, _ = self.mha(query=query,
                              key=key,

@@ -7,7 +7,7 @@ import numpy as np
 from ..components.layers import FnetCNNEncoder, Decoder
 
 
-class FnetCNNTranformer(nn.Module):
+class FnetCNNModel(nn.Module):
     def __init__(self,
                  model_dim: int,
                  extend_dim: int,
@@ -22,7 +22,7 @@ class FnetCNNTranformer(nn.Module):
                  summary_sequence_len: int,
                  fnet_cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> nn.Module:
-        """Create an FnetCNNTransformer.
+        """Creates an FnetCNNTransformer.
 
         Args:
             model_dim (int): Dimension of the model.
@@ -96,7 +96,6 @@ class FnetCNNTranformer(nn.Module):
         Returns:
             torch.tensor: Model output
         """
-        
         # Pass documents through our encoder
         encoder_output = self.encoder(tokens=doc_tokens,
                                       token_types=doc_token_types)

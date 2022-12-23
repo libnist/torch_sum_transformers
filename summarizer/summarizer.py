@@ -4,7 +4,7 @@ from torch import nn
 
 import numpy as np
 
-from .components.tokenizer import CustomTokenizer
+from .utils.tokenizer import CustomTokenizer
 
 MAX_LENGTH = 64
 
@@ -21,6 +21,10 @@ class Summarizer(nn.Module):
         self.model = model
         self.doc_tokenizer = document_tokenizer
         self.sum_tokenizer = summary_tokenizer
+        
+        self._fill_token_id = document_tokenizer.token_to_id("[FILL]")
+        
+        self.device = next(self.model.parameters()).device
 
         self.max_input_length = max_input_length
         self.max_output_length = max_output_length
@@ -66,7 +70,7 @@ class Summarizer(nn.Module):
         current_type = 0
         output_token_types_list = [current_type]
 
-        for _ in range(self.sum_tokenizer):
+        for _ in range(self.max_output_length):
             output_tokens_tensor = self.torch_tensor(output_tokens_list)
             output_token_types_tensor = self.torch_tensor(
                 output_token_types_list
@@ -79,8 +83,8 @@ class Summarizer(nn.Module):
 
             prediction = prediction[:, -1, :]
             prediction_id = torch.argmax(
-                torch.softmax(prediction),
-                dim=-1).item()
+                torch.softmax(prediction, dim=-1)
+            ).item()
             output_tokens_list.append(prediction_id)
 
             if prediction_id in type_changers:
@@ -96,4 +100,4 @@ class Summarizer(nn.Module):
                      x):
         return (torch.tensor(x, dtype=torch.int64)
                 .unsqueeze(0)
-                .to(self.model.device))
+                .to(self.device))

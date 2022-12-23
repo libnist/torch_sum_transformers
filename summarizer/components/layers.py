@@ -43,12 +43,12 @@ class FnetCNNEncoderLayer(nn.Module):
 
     def forward(self,
                 x: torch.tensor) -> torch.tensor:
-
         # Pass the input through FnetCNNBlock.
         output = self.fnet_cnn_block(x)
 
         # Pass the input through MLP block.
         return self.mlp_block(output)
+
 
 class FnetEncoderLayer(nn.Module):
     def __init__(self,
@@ -76,12 +76,12 @@ class FnetEncoderLayer(nn.Module):
 
     def forward(self,
                 x: torch.tensor) -> torch.tensor:
-
         # Pass the input through FnetBlock.
         output = self.fnet_block(x)
 
         # Pass the input through MLP block.
         return self.mlp_block(output)
+
 
 class DecoderLayer(nn.Module):
     def __init__(self,
@@ -96,7 +96,7 @@ class DecoderLayer(nn.Module):
             num_heads (int): Num heads used in MHA block.
             extend_dim (int): Dimenstion used in the first layer if mlp block.
             dropout (float, optional): Dropout rate. Default to .5.
-            
+
         Returns:
             torch.nn.Module: PyTorch Module.
         """
