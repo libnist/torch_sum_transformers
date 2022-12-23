@@ -19,11 +19,12 @@ def save_model(model: torch.nn.Module,
         optimizer (torch.optim.Optimzier): A torch optimizer.
         lr_scheduler: Learning rate scheduler.
     """
+    path = path / name
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
-    model_path = path / name / "model.pth"
-    optimizer_path = path / name / "optim.pth"
-    lr_scheduler_path = path / name / "lr_scheduler.pth"
+    model_path = path /  "model.pth"
+    optimizer_path = path / "optim.pth"
+    lr_scheduler_path = path / "lr_scheduler.pth"
     
     torch.save(model.state_dict(), model_path)
     print(f"\tModel is saved in: {model_path}")
@@ -52,9 +53,10 @@ def load_model(model: torch.nn.Module,
         lr_scheduler (_type_, optional): Learning rate scheduler.
         Defaults to None.
     """
-    model_path = path / name / "model.pth"
-    optimizer_path = path / name / "optim.pth"
-    lr_scheduler_path = path / name / "lr_scheduler.pth"
+    path = path / name
+    model_path = path / "model.pth"
+    optimizer_path = path / "optim.pth"
+    lr_scheduler_path = path / "lr_scheduler.pth"
     
     model.load_state_dict(torch.load(model_path))
     model.to(device)
