@@ -202,7 +202,8 @@ def train(model: torch.nn.Module,
           path: pathlib.Path = None,
           model_name: str = None,
           log_per_epoch: int = 100,
-          wandb_config: dict = None) -> Dict[str, list]:
+          wandb_config: dict = None,
+          wandb_proj: str = None) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.
 
     Args:
@@ -239,13 +240,15 @@ def train(model: torch.nn.Module,
     # a model_name also should be defined, it will be used to save
     # the model.
     if path:
-        assert model_name is not None, "Define model_name parameter."
+        assert model_name, "Define model_name parameter."
         
     # If wandb_config is defined, will be initializing it, so we can
     # make logs in Weights and Biases.
     if wandb_config:
+        assert wandb_proj, "Define wandb_proj as the project name."
         wandb.init(project=model_name,
-                   config=wandb_config)
+                   config=wandb_config,
+                   name=model_name)
 
     # The dictionary below will containg all the loss and accuracy
     # reports from the training proccess
