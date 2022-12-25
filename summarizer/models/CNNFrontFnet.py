@@ -89,6 +89,9 @@ class CNNFrontFnetModel(nn.Module):
         self.decoder = nn.TransformerDecoder(decoder_layer=decoder,
                                              num_layers=num_layers)
         
+        self.final = nn.Linear(in_features=d_model,
+                               out_features=sum_vocab_size)
+        
     def forward(self, 
                 doc_tokens: torch.tensor,
                 doc_token_types: torch.tensor,
@@ -107,6 +110,6 @@ class CNNFrontFnetModel(nn.Module):
         decoder_output = self.decoder(embedded_outputs,
                                       encoder_output,
                                       attn_mask)
-        return decoder_output
+        return self.final(decoder_output)
         
         
