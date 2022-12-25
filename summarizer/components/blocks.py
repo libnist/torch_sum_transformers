@@ -23,15 +23,15 @@ class TripleEmbeddingBlock(nn.Module):
             torch.nn.Module: PyTorch Module.
         """
         super(TripleEmbeddingBlock, self).__init__()
-        
+
         # Create word embedding layer.
         self.word_embedding = nn.Embedding(num_embeddings=num_word_embeddings,
                                            embedding_dim=embedding_dim)
-        
+
         # Create type embedding layer.
         self.type_embedding = nn.Embedding(num_embeddings=num_type_embeddings,
                                            embedding_dim=embedding_dim)
-        
+
         # Create positional embedding layer.
         self.positional_embedding = nn.Parameter(
             torch.rand((1, sequence_len, embedding_dim),
@@ -43,16 +43,16 @@ class TripleEmbeddingBlock(nn.Module):
                 token_types: torch.tensor) -> torch.tensor:
         # Getting the length of the input
         token_length = tokens.shape[-1]
-        
+
         # Perform word embeddings.
         word_embedding = self.word_embedding(tokens)
-        
+
         # Perform type embeddings.
         type_embedding = self.type_embedding(token_types)
-                
+
         # Add all the embeddings to produce the output tensor
-        return (word_embedding + 
-                type_embedding + 
+        return (word_embedding +
+                type_embedding +
                 self.positional_embedding[:, :token_length, :])
 
 
@@ -83,7 +83,7 @@ class MLPBlock(nn.Module):
 
         # Creating the output linear layer.
         self.output_layer = nn.Sequential(
-            nn.Linear(in_features=extend_dim, 
+            nn.Linear(in_features=extend_dim,
                       out_features=output_dim),
             nn.Dropout(p=dropout)
         )
@@ -117,7 +117,7 @@ class FnetBlock(nn.Module):
             torch.nn.Module: PyTorch Module.
         """
         super(FnetBlock, self).__init__()
-        
+
         # Create a dropoutlayer
         self.dropout = nn.Dropout(p=dropout)
 
@@ -182,13 +182,49 @@ class FnetCNNBlock(nn.Module):
         # Permute the CNN block output to put it into
         # sahpe: [batch, tokens, channel] -> [batch, num_tokens, model_dim]
         output = output.permute(0, 2, 1)
-        
+
         # Performing the fft2 and it's dropout.
         output = self.dropout(torch.real(torch.fft.fft2(x)))
 
         # Perform a layer normalizatoin, residual connection can't be done
         # cause the input and output shaps are different.
         return self.layer_norm(output)
+
+
+class CNNBlock(nn.Module):
+    def __init__(self,
+                 num_cnn_blocks: int,
+                 model_dim: int,
+                 kernel_size: int,
+                 dropout: float) -> torch.nn.Module:
+        """Return a stack of CNN layers which compresses the sequence.
+
+        Args:
+            num_cnn_blocks (int): Number of cnn blocks.
+            model_dim (int): Dimension of the models.
+            kernel_size (int): kernel size used in CNN and pooling layers.
+            dropout (float): Dropout rate.
+        """
+        super().__init__()
+
+        self.layers = nn.Sequential(
+            *[nn.Sequential(
+                nn.Conv1d(in_channels=model_dim,
+                          out_channels=model_dim,
+                          kernel_size=kernel_size,
+                          stride=1,
+                          padding="same"),
+                nn.ReLU(),
+                nn.MaxPool1d(kernel_size=kernel_size,
+                             stride=2),
+                nn.Dropout(p=dropout))
+              for _ in range(num_cnn_blocks)]
+        )
+
+    def forward(self, x: torch.tensor) -> torch.tensor:
+        x = x.permute(0, 2, 1)
+        x = self.layers(x)
+        return x.permute(0, 2, 1)
 
 
 class MHABlock(nn.Module):

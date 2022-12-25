@@ -148,7 +148,6 @@ class FnetCNNEncoder(nn.Module):
                  num_word_embeddings: int,
                  num_type_embeddings: int,
                  sequence_len: int,
-                 fnet_cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> torch.nn.Module:
         """Return an FnetCNNEncoder with `num_layers` of FnetEncoderLayer.
 
@@ -181,10 +180,9 @@ class FnetCNNEncoder(nn.Module):
 
         # Create a list of FnetCNNEncoderLayer Module.
         self.encoder_layers = nn.Sequential(
-            *[FnetCNNEncoderLayer(model_dim=model_dim,
-                                  extend_dim=extend_dim,
-                                  fnet_cnn_kernel_size=fnet_cnn_kernel_size,
-                                  dropout=dropout)
+            *[FnetEncoderLayer(model_dim=model_dim,
+                               extend_dim=extend_dim,
+                               dropout=dropout)
               for _ in range(num_layers)]
         )
 

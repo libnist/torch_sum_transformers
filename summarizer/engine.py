@@ -257,9 +257,10 @@ def train(model: torch.nn.Module,
     # Putting our model into the predefined device
     model.to(device)
     
-    tqdm_iterator = tqdm(range(epochs))
     if initial_epoch:
         tqdm_iterator = tqdm(range(initial_epoch, epochs))
+    else:
+        tqdm_iterator = tqdm(range(epochs))
 
     # Iterating as many epochs we need and updating our model weights.
     for epoch in tqdm_iterator:
