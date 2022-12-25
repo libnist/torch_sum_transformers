@@ -34,8 +34,8 @@ class TripleEmbeddingBlock(nn.Module):
 
         # Create positional embedding layer.
         self.positional_embedding = nn.Parameter(
-            torch.rand((1, sequence_len, embedding_dim),
-                       requires_grad=True)
+            torch.rand((1, sequence_len, embedding_dim)),
+            requires_grad=True
         )
 
     def forward(self,
