@@ -22,7 +22,9 @@ def train_step(model: torch.nn.Module,
                loss_function: torch.nn.Module,
                accuracy_function: FunctionType,
                optimizer: torch.optim.Optimizer,
-               log_per_epoch: int = 100) -> Tuple[float, float]:
+               device: str,
+               log_per_epoch: int = 100,
+               pretrained: bool = False) -> Tuple[float, float]:
     """Performs one epoch.
 
     Args:
@@ -53,35 +55,37 @@ def train_step(model: torch.nn.Module,
     num_batches = len(dataloader)
 
     # The next step is to train the model with our dataloader.
-    for batch, (X, y) in enumerate(dataloader):
+    for batch, (X, y, z) in enumerate(dataloader):
         # Device of the input tensors are already set in the
         # dataloader initialization.
 
         batch += 1
 
         # Getting data in the form of the models input
-
-        # Document inputs
-        doc_tokens = X[:, 0, :]  #[batch_size, doc_seq_len]
-        doc_token_types = X[:, 1, :]  #[batch_size, doc_seq_len]
-
-        # Summary input
-        sum_input_tokens = y[:, 0, :-1]  #[batch_size, sum_seq_len-1]
-        sum_input_token_types = y[:, 1, :-1]  #[batch_size, sum_seq_len-1]
-
-        # Summary targets
-        sum_target_tokens = y[:, 0, 1:]  #[batch_size, sum_seq_len-1]
+        
+        # Preparing inputs
+        inputs = []
+        if pretrained:
+            # add input docs
+            inputs.append(X.to(device))
+            # add input sums
+            inputs.append(y.to(device))
+        else:
+            # add input docs
+            inputs.append(X[:, 0, :].to(device))
+            inputs.append(X[:, 1, :].to(device))
+            # add input sums
+            inputs.append(y[:, 0, :].to(device))
+            inputs.append(y[:, 1, :].to(device))
+        z = z.to(device)
 
         # Forward pass
         # The output is in shape:
         # [batch_size, summary_token_length, sum_vocab_size]
-        sum_pred_logits = model(doc_tokens,
-                                doc_token_types,
-                                sum_input_tokens,
-                                sum_input_token_types)
+        sum_pred_logits = model(*inputs)
 
         # Calculating loss
-        loss = loss_function(sum_pred_logits, sum_target_tokens)
+        loss = loss_function(sum_pred_logits, z)
         train_loss += loss.item()
 
         # Backward pass and updating weights
@@ -99,7 +103,7 @@ def train_step(model: torch.nn.Module,
         # [batch_size, summary_token_lenght]
         sum_preds = torch.argmax(sum_pred_probs, dim=-1)
 
-        accuracy = accuracy_function(sum_preds, sum_target_tokens)
+        accuracy = accuracy_function(sum_preds, z)
         train_acc += accuracy.item()
 
         if ((not batch % log_per_epoch)
@@ -121,7 +125,9 @@ def train_step(model: torch.nn.Module,
 def test_step(model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader,
               loss_function: torch.nn.Module,
-              accuracy_function: FunctionType) -> Tuple[float, float]:
+              accuracy_function: FunctionType,
+              device: str,
+              pretrained: bool = False) -> Tuple[float, float]:
     """Performs one validation step on validation or test dataset.
 
     Args:
@@ -143,29 +149,33 @@ def test_step(model: torch.nn.Module,
     eval_loss, eval_acc = 0, 0
 
     with torch.inference_mode():
-        for X, y in dataloader:
+        for (X, y, z) in dataloader:
 
             # Getting the inputs in proper shape
 
-            # Document tokens
-            doc_tokens = X[:, 0, :]  #[batch_size, document_tokens]
-            doc_token_types = X[:, 1, :]  #[batch_size, document_tokens]
+            # Preparing inputs
+            inputs = []
+            if pretrained:
+                # add input docs
+                inputs.append(X.to(device))
+                # add input sums
+                inputs.append(y.to(device))
+            else:
+                # add input docs
+                inputs.append(X[:, 0, :].to(device))
+                inputs.append(X[:, 1, :].to(device))
+                # add input sums
+                inputs.append(y[:, 0, :].to(device))
+                inputs.append(y[:, 1, :].to(device))
+            z = z.to(device)
 
-            # Summary tokens
-            sum_input_tokens = y[:, 0, :-1] #[batch_size, summary_tokens-1]
-            sum_input_token_types = y[:, 1, :-1] #[batch_size, summary_tokens-1]
-            
-            # Summary target token
-            sum_target_tokens = y[:, 0, 1:] #[batch_size, summary_tokens-1]
-
-            # Making predictions
-            sum_pred_logits = model(doc_tokens,
-                                    doc_token_types,
-                                    sum_input_tokens,
-                                    sum_input_token_types)
+            # Forward pass
+            # The output is in shape:
+            # [batch_size, summary_token_length, sum_vocab_size]
+            sum_pred_logits = model(*inputs)
             
             # Calculating loss
-            loss = loss_function(sum_pred_logits, sum_target_tokens)
+            loss = loss_function(sum_pred_logits, z)
             eval_loss += loss.item()
 
             # Calculating probs, output_shape:
@@ -176,7 +186,7 @@ def test_step(model: torch.nn.Module,
             # [batch_size, summary_token_lenght]
             sum_preds = torch.argmax(sum_pred_probs, dim=-1)
 
-            accuracy = accuracy_function(sum_preds, sum_target_tokens)
+            accuracy = accuracy_function(sum_preds, z)
             eval_acc += accuracy.item()
 
     num_batches = len(dataloader)
@@ -196,6 +206,7 @@ def train(model: torch.nn.Module,
           optimizer: torch.optim.Optimizer,
           epochs: int,
           device: str,
+          pretrained: bool = False,
           initial_epoch: int = None,
           val_dataloader: torch.utils.data.DataLoader = None,
           lr_scheduler=None,
@@ -248,7 +259,8 @@ def train(model: torch.nn.Module,
         assert wandb_proj, "Define wandb_proj as the project name."
         wandb.init(project=wandb_proj,
                    config=wandb_config,
-                   name=model_name)
+                   name=model_name,
+                   resume=True)
 
     # The dictionary below will containg all the loss and accuracy
     # reports from the training proccess
@@ -271,7 +283,9 @@ def train(model: torch.nn.Module,
                                            loss_function=loss_function,
                                            accuracy_function=accuracy_function,
                                            optimizer=optimizer,
-                                           log_per_epoch=log_per_epoch)
+                                           log_per_epoch=log_per_epoch,
+                                           device=device,
+                                           pretrained=pretrained)
         
         # If there is a learning rate scheduler defined, after each train_step
         # will call it's .step() in order to update our optimizers lr.
@@ -296,7 +310,9 @@ def train(model: torch.nn.Module,
             test_loss, test_acc = test_step(model=model,
                                             dataloader=val_dataloader,
                                             loss_function=loss_function,
-                                            accuracy_function=accuracy_function)
+                                            accuracy_function=accuracy_function,
+                                            device=device,
+                                            pretrained=pretrained)
             # Append the results of the current finished validation epoch.
             results["val_losses"].append(test_loss)
             results["val_accuracies"].append(test_acc)
@@ -309,5 +325,8 @@ def train(model: torch.nn.Module,
                 log.update({"val_loss": test_loss,
                             "val_accuracy": test_acc})
             wandb.log(log, step=epoch)
+            
+    if wandb_config:
+        wandb.finish()
 
     return results

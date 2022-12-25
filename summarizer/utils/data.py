@@ -1,6 +1,7 @@
 # Import libraries
 import datasets
 from datasets import load_dataset, load_dataset_builder
+from transformers import FNetTokenizer
 
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -9,6 +10,7 @@ from typing import List, Tuple
 from . import tokenizer
 import numpy as np
 import os
+
 
 def description(name: str,
                 version: str = "3.0.0") -> None:
@@ -24,7 +26,7 @@ def description(name: str,
 
 def get_data(path: str,
              split: str,
-             *args, 
+             *args,
              version: str = "3.0.0",
              **kwargs) -> datasets.arrow_dataset.Dataset:
     """Downloads and returns a dataset in a specified version.
@@ -51,8 +53,7 @@ class DocumentSummaryDataset(Dataset):
                  document_tokenizer: tokenizer,
                  summary_tokenizer: tokenizer,
                  document_max_tokens: int,
-                 summary_max_tokens: int,
-                 device: str) -> torch.utils.data.Dataset:
+                 summary_max_tokens: int) -> torch.utils.data.Dataset:
         """Creates a dataset instance containing document and summaries
         w/ their corresponding type_ids.
 
@@ -82,8 +83,6 @@ class DocumentSummaryDataset(Dataset):
         self._summary_tokenizer = summary_tokenizer
 
         self._fill_token_id = document_tokenizer.token_to_id("[FILL]")
-
-        self._device = device
 
     def __len__(self) -> int:
         return self._len_documents
@@ -115,7 +114,7 @@ class DocumentSummaryDataset(Dataset):
         elif shape[-1] > max_tokens:
             encoded = encoded[:, :max_tokens]
 
-        return torch.tensor(encoded, dtype=torch.int64).to(self._device)
+        return torch.tensor(encoded, dtype=torch.int64)
 
     def __getitem__(self,
                     index: int) -> Tuple[torch.tensor, torch.tensor]:
@@ -131,11 +130,58 @@ class DocumentSummaryDataset(Dataset):
         encoded_document = self.encode_input(self._documents[index],
                                              self._document_tokenizer,
                                              self._document_max_tokens)
-        
+
         encoded_summary = self.encode_input(self._summaries[index],
                                             self._summary_tokenizer,
                                             self._summary_max_tokens)
-        return encoded_document, encoded_summary
+
+        encoded_input_summary = encoded_summary[:, :-1]
+        encoded_target_summary = encoded_summary[0, 1:]
+
+        return (encoded_document,
+                encoded_input_summary,
+                encoded_target_summary)
+
+
+class FNetPretrainedDocumentSummaryDataset(Dataset):
+    def __init__(self,
+                 documents: list,
+                 summaries: list,
+                 document_max_tokens: int,
+                 summary_max_tokens: int):
+
+        self._document_max_tokens = document_max_tokens
+        self._summary_max_tokens = summary_max_tokens
+
+        error_message = "[ERROR] Shape missmatch of documents and summaries"
+        self._len_documents = len(documents)
+        self._len_summaries = len(summaries)
+        assert self._len_documents == self._len_documents, error_message
+
+        self._documents = documents
+        self._summaries = summaries
+
+        self._tokenizer = FNetTokenizer.from_pretrained("google/fnet-base")
+
+    def __len__(self):
+        return self._len_documents
+
+    def __getitem__(self, i):
+        encoded_document = self._tokenizer(
+            self._documents[i],
+            padding="max_length",
+            max_length=self._document_max_tokens
+        )
+
+        encoded_summaries = self.tokenzier(
+            self._summaries[i],
+            padding="max_length",
+            max_length=self._summary_max_tokens
+        )
+
+        return (torch.LongTensor(encoded_document),
+                torch.LongTensor(encoded_summaries[:-1]),
+                torch.LongTensor(encoded_summaries[1:]))
 
 
 def get_dataloader(documents: List[str],
@@ -171,6 +217,46 @@ def get_dataloader(documents: List[str],
                                      document_max_tokens=document_max_tokens,
                                      summary_max_tokens=summary_max_tokens,
                                      device=device)
+    dataloader = DataLoader(dataset,
+                            batch_size=batch_size,
+                            shuffle=shuffle,
+                            num_workers=num_workers)
+    return dataloader
+
+
+def get__fnet_pretrained_dataloader(
+    documents: List[str],
+    summaries: List[str],
+    document_max_tokens: int,
+    summary_max_tokens: int,
+    batch_size: int, device: str,
+    num_workers: int = os.cpu_count(),
+    shuffle: bool = False
+) -> torch.utils.data.DataLoader:
+    """Creates a torch DataLoader from input documents and summaries.
+
+    Args:
+        documents (List[str]): A list containing input documents.
+        summaries (List[str]): A list containing input summaries.
+        document_tokenizer (tokenizer): Tokenizer used to tokenize documents.
+        summary_tokenizer (tokenizer): Tokenizer used to tokenize summaries.
+        document_max_tokens (int): Maximum number of tokens to return.
+        summary_max_tokens (int): Maximum number of tokens to return.
+        batch_size (int): Batch size.
+        device (str): Device.
+        shuffle (bool, optional): Shuffle. Defaults to False.
+        num_workers (int, optional): Num workers. Defaults to os.cpu_count().
+
+    Returns:
+        torch.utils.data.DataLoader: A torch DataLoader.
+    """
+    dataset = FNetPretrainedDocumentSummaryDataset(
+        documents=documents,
+        summaries=summaries,
+        document_max_tokens=document_max_tokens,
+        summary_max_tokens=summary_max_tokens,
+        device=device
+    )
     dataloader = DataLoader(dataset,
                             batch_size=batch_size,
                             shuffle=shuffle,
