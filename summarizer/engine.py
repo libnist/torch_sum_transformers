@@ -62,7 +62,7 @@ def train_step(model: torch.nn.Module,
         batch += 1
 
         # Getting data in the form of the models input
-        
+
         # Preparing inputs
         inputs = []
         if pretrained:
@@ -107,7 +107,7 @@ def train_step(model: torch.nn.Module,
         train_acc += accuracy.item()
 
         if ((not batch % log_per_epoch)
-            or (batch == num_batches)):
+                or (batch == num_batches)):
             loss_to_print = train_loss / batch
             accuracy_to_print = train_acc / batch
 
@@ -173,7 +173,7 @@ def test_step(model: torch.nn.Module,
             # The output is in shape:
             # [batch_size, summary_token_length, sum_vocab_size]
             sum_pred_logits = model(*inputs)
-            
+
             # Calculating loss
             loss = loss_function(sum_pred_logits, z)
             eval_loss += loss.item()
@@ -214,7 +214,8 @@ def train(model: torch.nn.Module,
           model_name: str = None,
           log_per_epoch: int = 100,
           wandb_config: dict = None,
-          wandb_proj: str = None) -> Dict[str, list]:
+          wandb_proj: str = None,
+          wandb_id: str = None) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.
 
     Args:
@@ -246,21 +247,27 @@ def train(model: torch.nn.Module,
     Returns:
         Dict[str, list]: A dictionary contaning training results.
     """
-    
+
     # If a path is defined in order for the model to be saved
     # a model_name also should be defined, it will be used to save
     # the model.
     if path:
         assert model_name, "Define model_name parameter."
-        
+
     # If wandb_config is defined, will be initializing it, so we can
     # make logs in Weights and Biases.
     if wandb_config:
         assert wandb_proj, "Define wandb_proj as the project name."
-        wandb.init(project=wandb_proj,
-                   config=wandb_config,
-                   name=model_name,
-                   resume=True)
+        if wandb_id:
+            wandb.init(id=wandb_id,
+                       project=wandb_proj,
+                       config=wandb_config,
+                       name=model_name,
+                       resume="must")
+        else:
+            wandb.init(project=wandb_proj,
+                       config=wandb_config,
+                       name=model_name)
 
     # The dictionary below will containg all the loss and accuracy
     # reports from the training proccess
@@ -268,7 +275,7 @@ def train(model: torch.nn.Module,
 
     # Putting our model into the predefined device
     model.to(device)
-    
+
     if initial_epoch:
         tqdm_iterator = tqdm(range(initial_epoch, epochs))
     else:
@@ -286,16 +293,16 @@ def train(model: torch.nn.Module,
                                            log_per_epoch=log_per_epoch,
                                            device=device,
                                            pretrained=pretrained)
-        
+
         # If there is a learning rate scheduler defined, after each train_step
         # will call it's .step() in order to update our optimizers lr.
         if lr_scheduler:
             lr_scheduler.step()
-            
+
         # Append the results of the current finished epoch.
         results["train_losses"].append(train_loss)
         results["train_accuracies"].append(train_acc)
-        
+
         # Save the model in case of having a path to save it.
         if path:
             save_model(model=model,
@@ -303,7 +310,7 @@ def train(model: torch.nn.Module,
                        name=model_name,
                        optimizer=optimizer,
                        lr_scheduler=lr_scheduler)
-            
+
         # We'll be evaluate our model in case of having an validation
         # dataset.
         if val_dataloader:
@@ -316,7 +323,7 @@ def train(model: torch.nn.Module,
             # Append the results of the current finished validation epoch.
             results["val_losses"].append(test_loss)
             results["val_accuracies"].append(test_acc)
-            
+
         # Report our results to wandb
         if wandb_config:
             log = {"train_loss": train_loss,
@@ -324,8 +331,8 @@ def train(model: torch.nn.Module,
             if val_dataloader:
                 log.update({"val_loss": test_loss,
                             "val_accuracy": test_acc})
-            wandb.log(log, step=epoch)
-            
+            wandb.log(log, step=epoch, commit=True)
+
     if wandb_config:
         wandb.finish()
 
