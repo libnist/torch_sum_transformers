@@ -56,7 +56,7 @@ class FnetPretrainedModel(nn.Module):
                 sum_tokens: torch.tensor):
 
         x = self.embedding(doc_tokens, None)
-        x = self.pretrained_encoder(x)
+        x = self.pretrained_encoder(x).last_hidden_state
         x = self.compress_encoder(x)
         
         y = self.embedding(sum_tokens, None)

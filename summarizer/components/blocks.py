@@ -184,7 +184,7 @@ class FnetCNNBlock(nn.Module):
         output = output.permute(0, 2, 1)
 
         # Performing the fft2 and it's dropout.
-        output = self.dropout(torch.real(torch.fft.fft2(x)))
+        output = self.dropout(torch.real(torch.fft.fft2(output)))
 
         # Perform a layer normalizatoin, residual connection can't be done
         # cause the input and output shaps are different.
