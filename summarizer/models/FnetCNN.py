@@ -5,7 +5,7 @@ from torch import nn
 import numpy as np
 
 from ..components.layers import FnetCNNEncoder, Decoder
-
+from ..components.blocks import TripleEmbeddingBlock
 
 class FnetCNNModel(nn.Module):
     def __init__(self,
@@ -61,16 +61,20 @@ class FnetCNNModel(nn.Module):
         )
         
         # Create the Decoder
-        self.decoder = Decoder(
-            num_layers=dec_num_layers,
-            model_dim=model_dim,
-            num_heads=num_heads,
-            extend_dim=extend_dim,
+        self.decoder_embedding = TripleEmbeddingBlock(
             num_word_embeddings=summary_vocab_size,
             num_type_embeddings=max_summary_sentences,
-            sequence_len=summary_sequence_len,
-            dropout=dropout
+            embedding_dim=model_dim,
+            sequence_len=summary_sequence_len
         )
+        
+        decoder = nn.TransformerDecoderLayer(d_model=model_dim,
+                                             nhead=num_heads,
+                                             dim_feedforward=extend_dim,
+                                             dropout=dropout,
+                                             batch_first=True)
+        self.decoder = nn.TransformerDecoder(decoder_layer=decoder,
+                                             num_layers=dec_num_layers)
 
         # Create the output layer
         self.output_layer = nn.Linear(in_features=model_dim,
@@ -101,12 +105,13 @@ class FnetCNNModel(nn.Module):
                                       token_types=doc_token_types)
         
         # Pass summaries and encoder_outputs to our decoder
+        decoder_embeddings = self.decoder_embedding(sum_tokens,
+                                                    sum_token_types)
         attn_mask = self.get_attn_mask(sum_tokens.shape[-1],
                                        sum_tokens.device)
-        decoder_outputs = self.decoder(tokens=sum_tokens,
-                                       token_types=sum_token_types,
-                                       encoder_output=encoder_output,
-                                       attn_mask=attn_mask)
+        decoder_outputs = self.decoder(decoder_embeddings,
+                                       encoder_output,
+                                       attn_mask)
         
         # Generate our predictions.
         return self.output_layer(decoder_outputs)
