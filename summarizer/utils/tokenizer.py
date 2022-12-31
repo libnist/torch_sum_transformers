@@ -137,9 +137,9 @@ class CustomTokenizer:
             Tuple: Tuple[List[int], List[int]]
         """
         input = re.sub("\\n", ".", input)
-        input = re.sub("\. *", ". [SEP] ", input)
-        input = re.sub("\! *", "! [SEP] ", input)
-        input = re.sub("\? *", "? [SEP] ", input)
+        input = re.sub("\. +", ". [SEP] ", input)
+        input = re.sub("\! +", "! [SEP] ", input)
+        input = re.sub("\? +", "? [SEP] ", input)
         output = self._tokenizer.encode(input)
         return output.ids, self.get_type_ids(output.ids)
     
