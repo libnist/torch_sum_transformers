@@ -56,7 +56,7 @@ def train_step(model: torch.nn.Module,
 
     t_range = trange(num_batches)
     t_range.set_description("\t\tTrain Batches")
-    
+
     # The next step is to train the model with our dataloader.
     for batch, (X, y, z) in zip(t_range, dataloader):
         # Device of the input tensors are already set in the
@@ -113,10 +113,9 @@ def train_step(model: torch.nn.Module,
                 or (batch == num_batches)):
             loss_to_print = train_loss / batch
             accuracy_to_print = train_acc / batch
-            
+
             t_range.set_postfix(Train_Loss=f"{loss_to_print:8.4f}",
-                                Train_Accuracy=f"{accuracy_to_print:8.4f}")
-    print()
+                                Train_Accuracy=f"{accuracy_to_print*100:4.2f}")
     train_loss /= num_batches
     train_acc /= num_batches
     return (train_loss, train_acc)
@@ -147,15 +146,15 @@ def test_step(model: torch.nn.Module,
     # Putting the model in eval mode
     model.eval()
     eval_loss, eval_acc = 0, 0
-    
+
     num_batches = len(dataloader)
     t_range = trange(num_batches)
     t_range.set_description("\t\tTest Batches")
 
     with torch.inference_mode():
-        for _, (X, y, z) in zip(t_range, dataloader):
+        for batch, (X, y, z) in zip(t_range, dataloader):
+            batch += 1
             # Getting the inputs in proper shape
-
             # Preparing inputs
             inputs = []
             if pretrained:
@@ -191,13 +190,13 @@ def test_step(model: torch.nn.Module,
 
             accuracy = accuracy_function(sum_preds, z)
             eval_acc += accuracy.item()
+            
+            if batch == num_batches:
+                eval_loss /= num_batches
+                eval_acc /= num_batches
 
-    eval_loss /= num_batches
-    eval_acc /= num_batches
-    
-    t_range.set_postfix(Test_Loss=f"{eval_loss:8.4f}",
-                        Test_Accuracy=f"{eval_acc:8.4f}")
-    print()
+                t_range.set_postfix(Test_Loss=f"{eval_loss:8.4f}",
+                                    Test_Accuracy=f"{eval_acc*100:4.2f}")
     return eval_loss, eval_acc
 
 
@@ -287,7 +286,7 @@ def train(model: torch.nn.Module,
     # Iterating as many epochs we need and updating our model weights.
     for epoch in range_iter:
         epoch += 1
-        print(f"Epoch {epoch} of {epochs}: ", end="")
+        print(f"{'-'*20}> Start Epoch {epoch} of {epochs}: ", end="")
         train_loss, train_acc = train_step(model=model,
                                            dataloader=train_dataloader,
                                            loss_function=loss_function,
@@ -344,13 +343,14 @@ def train(model: torch.nn.Module,
             if val_dataloader:
                 acc_log.update({"val_acc": test_acc})
                 loss_log.update({"val_loss": test_loss})
-            tb_writer.add_scalar(main_tag="Loss",
-                                 tag_scaler_dict=loss_log,
-                                 global_step=epoch)
-            tb_writer.add_scalar(main_tag="Accuracy",
-                                 tag_scaler_dict=acc_log,
-                                 global_step=epoch)
+            tb_writer.add_scalars(main_tag="Loss",
+                                  tag_scaler_dict=loss_log,
+                                  global_step=epoch)
+            tb_writer.add_scalars(main_tag="Accuracy",
+                                  tag_scaler_dict=acc_log,
+                                  global_step=epoch)
             print(f"{'-'*10}> TensorBoared Logs are reported!")
+        print(f"{'-'*20}> End Epoch {epoch} of {epochs}: ")
 
     if wandb_config:
         wandb.finish()
