@@ -4,7 +4,7 @@ from torch import nn
 
 import numpy as np
 
-from ..components.layers import FnetCNNEncoder, Decoder
+from ..components.layers import FnetCNNEncoder
 from ..components.blocks import TripleEmbeddingBlock
 
 class FnetCNNModel(nn.Module):

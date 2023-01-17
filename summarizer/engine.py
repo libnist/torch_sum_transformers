@@ -14,6 +14,8 @@ from .utils.save_and_load import save_model
 
 import wandb
 
+from torch.utils.tensorboard import SummaryWriter
+
 # Train step: Performs one epoch on the training data
 
 
@@ -215,7 +217,8 @@ def train(model: torch.nn.Module,
           log_per_epoch: int = 100,
           wandb_config: dict = None,
           wandb_proj: str = None,
-          wandb_id: str = None) -> Dict[str, list]:
+          wandb_id: str = None,
+          tb_writer: torch.utils.tensorboard.SummaryWriter = None) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.
 
     Args:
@@ -332,8 +335,24 @@ def train(model: torch.nn.Module,
                 log.update({"val_loss": test_loss,
                             "val_accuracy": test_acc})
             wandb.log(log, step=epoch, commit=True)
+            
+        # Report our results to tensorboard
+        if tb_writer:
+            acc_log = {"train_acc": train_acc}
+            loss_log = {"train_loss": train_loss}
+            if val_dataloader:
+                acc_log.update({"val_acc": test_acc})
+                loss_log.update({"val_loss": test_loss})
+            tb_writer.add_scaler(main_tag="Loss",
+                                 tag_scaler_dict=loss_log,
+                                 global_step=epoch)
+            tb_writer.add_scaler(main_tag="Accuracy",
+                                 tag_scaler_dict=acc_log,
+                                 global_step=epoch)
 
     if wandb_config:
         wandb.finish()
+    if tb_writer:
+        tb_writer.close()
 
     return results
