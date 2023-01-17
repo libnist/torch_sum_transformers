@@ -55,7 +55,7 @@ def train_step(model: torch.nn.Module,
     num_batches = len(dataloader)
 
     t_range = trange(num_batches)
-    t_range.set_description("Train Batch")
+    t_range.set_description("\t\tTrain Batches")
     
     # The next step is to train the model with our dataloader.
     for batch, (X, y, z) in zip(t_range, dataloader):
@@ -150,7 +150,7 @@ def test_step(model: torch.nn.Module,
     
     num_batches = len(dataloader)
     t_range = trange(num_batches)
-    t_range.set_description("Test Batch:")
+    t_range.set_description("\t\tTest Batches")
 
     with torch.inference_mode():
         for _, (X, y, z) in zip(t_range, dataloader):
