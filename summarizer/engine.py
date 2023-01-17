@@ -1,7 +1,7 @@
 # Import libraries
 import torch
 
-from tqdm.auto import tqdm
+from tqdm.auto import tqdm, trange
 
 from typing import Tuple, Dict
 from types import FunctionType
@@ -14,8 +14,6 @@ from .utils.save_and_load import save_model
 
 import wandb
 
-from torch.utils.tensorboard import SummaryWriter
-
 # Train step: Performs one epoch on the training data
 
 
@@ -25,7 +23,7 @@ def train_step(model: torch.nn.Module,
                accuracy_function: FunctionType,
                optimizer: torch.optim.Optimizer,
                device: str,
-               log_per_epoch: int = 100,
+               log_per_batch: int = 100,
                pretrained: bool = False) -> Tuple[float, float]:
     """Performs one epoch.
 
@@ -39,7 +37,7 @@ def train_step(model: torch.nn.Module,
         accuracy_function (FunctionType): An accuracy function which returns
         a torch.tensor.
         optimizer (torch.optim.Optimizers): Optimizer.
-        log_per_epoch (int, optional): This number specifies how many times
+        log_per_batch (int, optional): This number specifies how many times
         your going to print in-epoch results. Defaults to 100.
 
     Returns:
@@ -56,8 +54,11 @@ def train_step(model: torch.nn.Module,
     # time we want it again.
     num_batches = len(dataloader)
 
+    t_range = trange(num_batches)
+    t_range.set_description("Train Batch")
+    
     # The next step is to train the model with our dataloader.
-    for batch, (X, y, z) in enumerate(dataloader):
+    for batch, (X, y, z) in zip(t_range, dataloader):
         # Device of the input tensors are already set in the
         # dataloader initialization.
 
@@ -108,17 +109,14 @@ def train_step(model: torch.nn.Module,
         accuracy = accuracy_function(sum_preds, z)
         train_acc += accuracy.item()
 
-        if ((not batch % log_per_epoch)
+        if ((not batch % log_per_batch)
                 or (batch == num_batches)):
             loss_to_print = train_loss / batch
             accuracy_to_print = train_acc / batch
-
-            print(f"\tBatch {batch} of {num_batches}: " +
-                  f"'{batch/num_batches*100:4.2f}%':\t", end="")
-
-            print(f"Train Loss: {loss_to_print:8.4f} |  " +
-                  f"Train Accuracy: {accuracy_to_print:8.4f}")
-
+            
+            t_range.set_postfix(Train_Loss=f"{loss_to_print:8.4f}",
+                                Train_Accuracy=f"{accuracy_to_print:8.4f}")
+    print()
     train_loss /= num_batches
     train_acc /= num_batches
     return (train_loss, train_acc)
@@ -149,10 +147,13 @@ def test_step(model: torch.nn.Module,
     # Putting the model in eval mode
     model.eval()
     eval_loss, eval_acc = 0, 0
+    
+    num_batches = len(dataloader)
+    t_range = trange(num_batches)
+    t_range.set_description("Test Batch:")
 
     with torch.inference_mode():
-        for (X, y, z) in dataloader:
-
+        for _, (X, y, z) in zip(t_range, dataloader):
             # Getting the inputs in proper shape
 
             # Preparing inputs
@@ -191,13 +192,12 @@ def test_step(model: torch.nn.Module,
             accuracy = accuracy_function(sum_preds, z)
             eval_acc += accuracy.item()
 
-    num_batches = len(dataloader)
     eval_loss /= num_batches
     eval_acc /= num_batches
-
-    print(f"{'-'*10}>Validation Loss: {eval_loss:4.4f} | " +
-          f"Validation Acc: {eval_acc:4.4f}")
-
+    
+    t_range.set_postfix(Test_Loss=f"{eval_loss:8.4f}",
+                        Test_Accuracy=f"{eval_acc:8.4f}")
+    print()
     return eval_loss, eval_acc
 
 
@@ -214,7 +214,7 @@ def train(model: torch.nn.Module,
           lr_scheduler=None,
           path: pathlib.Path = None,
           model_name: str = None,
-          log_per_epoch: int = 100,
+          log_per_batch: int = 100,
           wandb_config: dict = None,
           wandb_proj: str = None,
           wandb_id: str = None,
@@ -242,8 +242,8 @@ def train(model: torch.nn.Module,
         lr_scheduler in the given path.
         model_name (str, Optional): Model will be saved under this name.
         (if path is defined model_name should be defined too.)
-        log_per_epoch (int, Optional): Prints models log after each 
-        `log_per_epoch` time.
+        log_per_batch (int, Optional): Prints models log after each 
+        `log_per_batch` time.
         wandb_config (dict, Optional): In case of setting this parameter as
         the training information. it will log our metrics into WandB.
 
@@ -280,39 +280,26 @@ def train(model: torch.nn.Module,
     model.to(device)
 
     if initial_epoch:
-        tqdm_iterator = tqdm(range(initial_epoch, epochs))
+        range_iter = range(initial_epoch, epochs)
     else:
-        tqdm_iterator = tqdm(range(epochs))
+        range_iter = range(epochs)
 
     # Iterating as many epochs we need and updating our model weights.
-    for epoch in tqdm_iterator:
+    for epoch in range_iter:
         epoch += 1
-        print(f"Epoch {epoch} of {epochs}")
+        print(f"Epoch {epoch} of {epochs}: ", end="")
         train_loss, train_acc = train_step(model=model,
                                            dataloader=train_dataloader,
                                            loss_function=loss_function,
                                            accuracy_function=accuracy_function,
                                            optimizer=optimizer,
-                                           log_per_epoch=log_per_epoch,
+                                           log_per_batch=log_per_batch,
                                            device=device,
                                            pretrained=pretrained)
-
-        # If there is a learning rate scheduler defined, after each train_step
-        # will call it's .step() in order to update our optimizers lr.
-        if lr_scheduler:
-            lr_scheduler.step()
 
         # Append the results of the current finished epoch.
         results["train_losses"].append(train_loss)
         results["train_accuracies"].append(train_acc)
-
-        # Save the model in case of having a path to save it.
-        if path:
-            save_model(model=model,
-                       path=path,
-                       name=model_name,
-                       optimizer=optimizer,
-                       lr_scheduler=lr_scheduler)
 
         # We'll be evaluate our model in case of having an validation
         # dataset.
@@ -327,6 +314,19 @@ def train(model: torch.nn.Module,
             results["val_losses"].append(test_loss)
             results["val_accuracies"].append(test_acc)
 
+        # If there is a learning rate scheduler defined, after each train_step
+        # will call it's .step() in order to update our optimizers lr.
+        if lr_scheduler:
+            lr_scheduler.step()
+
+        # Save the model in case of having a path to save it.
+        if path:
+            save_model(model=model,
+                       path=path,
+                       name=model_name,
+                       optimizer=optimizer,
+                       lr_scheduler=lr_scheduler)
+
         # Report our results to wandb
         if wandb_config:
             log = {"train_loss": train_loss,
@@ -335,7 +335,8 @@ def train(model: torch.nn.Module,
                 log.update({"val_loss": test_loss,
                             "val_accuracy": test_acc})
             wandb.log(log, step=epoch, commit=True)
-            
+            print(f"{'-'*10}> Wandb Logs are reported!")
+
         # Report our results to tensorboard
         if tb_writer:
             acc_log = {"train_acc": train_acc}
@@ -343,12 +344,13 @@ def train(model: torch.nn.Module,
             if val_dataloader:
                 acc_log.update({"val_acc": test_acc})
                 loss_log.update({"val_loss": test_loss})
-            tb_writer.add_scaler(main_tag="Loss",
+            tb_writer.add_scalar(main_tag="Loss",
                                  tag_scaler_dict=loss_log,
                                  global_step=epoch)
-            tb_writer.add_scaler(main_tag="Accuracy",
+            tb_writer.add_scalar(main_tag="Accuracy",
                                  tag_scaler_dict=acc_log,
                                  global_step=epoch)
+            print(f"{'-'*10}> TensorBoared Logs are reported!")
 
     if wandb_config:
         wandb.finish()

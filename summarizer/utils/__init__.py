@@ -13,9 +13,9 @@ def summary_writer(path: str,
         time = datetime.now().strftime("%Y-%m-%d")
     
     if not extra:
-        log_dir = os.path.joint(path, model_name, time)
+        log_dir = os.path.join(path, model_name, time)
     else:
-        log_dir = os.path.joint(path, model_name, time, extra)
+        log_dir = os.path.join(path, model_name, time, extra)
         
     return SummaryWriter(log_dir=log_dir)
         
