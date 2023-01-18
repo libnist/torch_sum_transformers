@@ -286,7 +286,7 @@ def train(model: torch.nn.Module,
     # Iterating as many epochs we need and updating our model weights.
     for epoch in range_iter:
         epoch += 1
-        print(f"{'-'*20}> Start Epoch {epoch} of {epochs}: ", end="")
+        print(f"{'*'*20} Start of Epoch {epoch}/{epochs} {'*'*20}", end="")
         train_loss, train_acc = train_step(model=model,
                                            dataloader=train_dataloader,
                                            loss_function=loss_function,
@@ -334,23 +334,23 @@ def train(model: torch.nn.Module,
                 log.update({"val_loss": test_loss,
                             "val_accuracy": test_acc})
             wandb.log(log, step=epoch, commit=True)
-            print(f"{'-'*10}> Wandb Logs are reported!")
+            print(f"\t\tWandb Logs are reported!")
 
         # Report our results to tensorboard
         if tb_writer:
-            acc_log = {"train_acc": train_acc}
-            loss_log = {"train_loss": train_loss}
+            acc_log = {"train": train_acc}
+            loss_log = {"train": train_loss}
             if val_dataloader:
-                acc_log.update({"val_acc": test_acc})
-                loss_log.update({"val_loss": test_loss})
+                acc_log.update({"val": test_acc})
+                loss_log.update({"val": test_loss})
             tb_writer.add_scalars(main_tag="Loss",
-                                  tag_scaler_dict=loss_log,
+                                  tag_scalar_dict=loss_log,
                                   global_step=epoch)
             tb_writer.add_scalars(main_tag="Accuracy",
-                                  tag_scaler_dict=acc_log,
+                                  tag_scalar_dict=acc_log,
                                   global_step=epoch)
-            print(f"{'-'*10}> TensorBoared Logs are reported!")
-        print(f"{'-'*20}> End Epoch {epoch} of {epochs}: ")
+            print(f"\t\tTensorBoard Logs are reported!")
+        print(f"{'*'*20} End of Epoch {epoch}{'*'*20}\n\n")
 
     if wandb_config:
         wandb.finish()
