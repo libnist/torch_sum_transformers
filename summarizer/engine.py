@@ -334,7 +334,7 @@ def train(model: torch.nn.Module,
                 log.update({"val_loss": test_loss,
                             "val_accuracy": test_acc})
             wandb.log(log, step=epoch, commit=True)
-            print(f"\t\tWandb Logs are reported!")
+            print(f"\tWandb Logs are reported!")
 
         # Report our results to tensorboard
         if tb_writer:
@@ -349,7 +349,7 @@ def train(model: torch.nn.Module,
             tb_writer.add_scalars(main_tag="Accuracy",
                                   tag_scalar_dict=acc_log,
                                   global_step=epoch)
-            print(f"\t\tTensorBoard Logs are reported!")
+            print(f"\tTensorBoard Logs are reported!")
         print(f"{'*'*20} End of Epoch {epoch}{'*'*20}\n\n")
 
     if wandb_config:
