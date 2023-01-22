@@ -47,8 +47,8 @@ class FnetCNNEncoderLayer(nn.Module):
         output = self.fnet_cnn_block(x)
 
         # Pass the input through MLP block.
-        return self.mlp_block(output)   
-        
+        return self.mlp_block(output)
+
 
 class FnetEncoderLayer(nn.Module):
     def __init__(self,
@@ -180,22 +180,30 @@ class FnetCNNEncoder(nn.Module):
         )
 
         # Create a list of FnetCNNEncoderLayer Module.
-        self.encoder_layers = nn.Sequential(
-            *[FnetCNNEncoderLayer(model_dim=model_dim,
-                                  extend_dim=extend_dim,
-                                  fnet_cnn_kernel_size=fnet_cnn_kernel_size,
-                                  dropout=dropout)
-              for _ in range(num_layers)]
+        self.encoder_layers = nn.ModuleList(
+            [FnetCNNEncoderLayer(model_dim=model_dim,
+                                 extend_dim=extend_dim,
+                                 fnet_cnn_kernel_size=fnet_cnn_kernel_size,
+                                 dropout=dropout)
+             for _ in range(num_layers)]
         )
 
     def forward(self,
                 tokens: torch.tensor,
-                token_types: torch.tensor) -> torch.tensor:
-        # Perform the embeddings
+                token_types: torch.tensor,
+                return_output_list: bool = False) -> torch.tensor:
+        
+        output_list = []
+        
         x = self.embedding(tokens, token_types)
-
-        # Go through all FnetCNNEncoderLayers.
-        return self.encoder_layers(x)
+        
+        for module in self.encoder_layers:
+            x = module(x)
+            output_list.append(x)
+            
+        if return_output_list:
+            return output_list
+        return output_list[-1]
 
 
 class Decoder(nn.Module):
@@ -226,9 +234,6 @@ class Decoder(nn.Module):
         """
         super().__init__()
 
-        # Setting number of layers as an instance attr.
-        self.num_layers = num_layers
-
         # Creating the embedding layer
         self.embedding = TripleEmbeddingBlock(
             num_word_embeddings=num_word_embeddings,
@@ -249,7 +254,7 @@ class Decoder(nn.Module):
     def forward(self,
                 tokens: torch.tensor,
                 token_types: torch.tensor,
-                encoder_output: torch.tensor,
+                encoder_outputs: list,
                 attn_mask: torch.tensor) -> torch.tensor:
         """Forward pass of the Decoder.
 
@@ -269,8 +274,8 @@ class Decoder(nn.Module):
         x = self.embedding(tokens, token_types)
 
         # Now we pass the embedded tokens through our stack of DecoderLayers
-        for i in range(self.num_layers):
-            x = self.decoder_layers[i](x=x,
-                                       encoder_output=encoder_output,
-                                       attn_mask=attn_mask)
+        for i, module in enumerate(self.decoder_layers):
+            x = module(x=x,
+                       encoder_output=encoder_outputs[i],
+                       attn_mask=attn_mask)
         return x
