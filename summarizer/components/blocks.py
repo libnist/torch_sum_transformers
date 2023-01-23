@@ -267,10 +267,14 @@ class MHABlock(nn.Module):
 
     def forward(self,
                 query: torch.tensor,
-                key: torch.tensor,
-                value: torch.tensor,
+                key: torch.tensor = None,
+                value: torch.tensor = None,
                 attn_mask: torch.tensor = None) -> torch.tensor:
         # Performing MHSA.
+        
+        if key is None and value is None:
+            key, value = query, query
+        
         output, _ = self.mha(query=query,
                              key=key,
                              value=value,

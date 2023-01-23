@@ -8,7 +8,8 @@ from .blocks import (
     MHABlock,
     MLPBlock,
     TripleEmbeddingBlock,
-    FnetBlock
+    FnetBlock,
+    CNNBlock
 )
 
 
@@ -48,6 +49,38 @@ class FnetCNNEncoderLayer(nn.Module):
 
         # Pass the input through MLP block.
         return self.mlp_block(output)
+    
+class MHACNNEncoderLayer(nn.Sequential):
+    def __init__(self,
+                 model_dim: int,
+                 num_heads: int,
+                 extend_dim: int,
+                 cnn_kernel_size: int,
+                 dropout: float = .5) -> torch.nn.Module:
+        super().__init__()
+        
+        self.add_module("cnn_block",
+                        CNNBlock(
+                            num_cnn_blocks=1,
+                            model_dim=model_dim,
+                            kernel_size=cnn_kernel_size,
+                            dropout=dropout
+                            )
+        )
+
+        self.add_module("MHA",
+                        MHABlock(
+                            embed_dim=model_dim,
+                            num_heads=num_heads,
+                            dropout=dropout
+                            )
+        )
+
+        self.add_module("mlp",
+                        MLPBlock(extend_dim=extend_dim,
+                                  output_dim=model_dim,
+                                  dropout=dropout)
+        )
 
 
 class FnetEncoderLayer(nn.Module):
@@ -204,6 +237,59 @@ class FnetCNNEncoder(nn.Module):
         if return_output_list:
             return output_list
         return output_list[-1]
+    
+    
+class MHACNNEncoder(nn.Module):
+    def __init__(self,
+                 num_layers: int,
+                 model_dim: int,
+                 num_heads: int,
+                 extend_dim: int,
+                 num_word_embeddings: int,
+                 num_type_embeddings: int,
+                 sequence_len: int,
+                 cnn_kernel_size: int = 3,
+                 dropout: float = 0.5) -> torch.nn.Module:
+        super().__init__()
+
+        # Set the num_layers as an instance attr.
+        self.num_layers = num_layers
+
+        # Create the embedding block.
+        self.embedding = TripleEmbeddingBlock(
+            num_word_embeddings=num_word_embeddings,
+            num_type_embeddings=num_type_embeddings,
+            embedding_dim=model_dim,
+            sequence_len=sequence_len
+        )
+
+        # Create a list of FnetCNNEncoderLayer Module.
+        self.encoder_layers = nn.ModuleList(
+            [MHACNNEncoderLayer(model_dim=model_dim,
+                                num_heads=num_heads,
+                                extend_dim=extend_dim,
+                                cnn_kernel_size=cnn_kernel_size,
+                                dropout=dropout)
+             for _ in range(num_layers)]
+        )
+
+    def forward(self,
+                tokens: torch.tensor,
+                token_types: torch.tensor,
+                return_output_list: bool = False) -> torch.tensor:
+        
+        output_list = []
+        
+        x = self.embedding(tokens, token_types)
+                
+        for module in self.encoder_layers:
+            x = module(x)
+            output_list.append(x)
+            
+        if return_output_list:
+            return output_list
+        return output_list[-1]
+
 
 
 class Decoder(nn.Module):
