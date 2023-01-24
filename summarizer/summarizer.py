@@ -130,48 +130,86 @@ class Summarizer(nn.Module):
         input_tokens = encoder_input[:, 0, :]
         input_token_types = encoder_input[:, 1, :]
 
-        output_tokens_list = [[self.start]]
-        current_type = 0
-        output_token_types_list = [[current_type]]
-
         (output_tokens_list,
          output_token_types_list,
-         output_likes) = self.search(
+         output_likes) = self.first_k(
             input_tokens=input_tokens,
             input_token_types=input_token_types,
-            output_tokens=output_tokens_list,
-            output_token_types=output_token_types_list,
-            output_likes=output_likes,
-            k=self.k,
-            first=True
+            k=self.k
         )
+         
+        print("Tokens", output_tokens_list)
+        print("output_token_types", output_token_types_list)
+        print("Likes", output_likes)
 
-        for _ in range(self.max_output_length - 1):
-            (output_tokens_list,
-             output_token_types_list,
-             output_likes) = self.search(
-                input_tokens=input_tokens,
-                input_token_types=input_token_types,
-                output_tokens=output_tokens_list,
-                output_token_types=output_token_types_list,
-                output_likes=output_likes,
-                k=self.k
-            )
+        # for _ in range(self.max_output_length - 1):
+        #     (output_tokens_list,
+        #      output_token_types_list,
+        #      output_likes) = self.search(
+        #         input_tokens=input_tokens,
+        #         input_token_types=input_token_types,
+        #         output_tokens=output_tokens_list,
+        #         output_token_types=output_token_types_list,
+        #         output_likes=output_likes,
+        #         k=self.k
+        #     )
 
-        return self.sum_tokenizer.decode(output_tokens_list[-1])
+        # return self.sum_tokenizer.decode(output_tokens_list[-1])
 
     def torch_tensor(self,
                      x):
         x = torch.tensor(x, dtype=torch.int64).to(self.device)
-        if len(x.shape) != 2:
-            return x.unsqueeze(0)
         return x
 
     def first_k(self,
                 input_tokens,
                 input_token_types,
                 k):
-        pass
+        
+        initial_token = self.start
+        initial_type = 0
+        output_tokens = [[initial_token]]
+        output_token_types = [[initial_type]]
+
+        with torch.iference_mode():
+            predictions = self.model(input_tokens,
+                                     input_token_types,
+                                     output_tokens,
+                                     output_token_types)
+
+            top_k = torch.topk(torch.log_softmax(predictions[:, -1, :],
+                                                 dim=-1),
+                               k=k,
+                               dim=-1)
+
+            top_k_log_soft = top_k.values.squeeze().tolist()
+            top_k_ind = top_k.indices.squeeze().tolist()
+
+        temp_output_tokens = []
+        temp_output_token_types = []
+        temp_output_likes = []
+        
+        temp = []
+
+        for i in range(k):
+            token = top_k_ind[i]
+            temp_output_tokens.append(output_tokens[0] + [token])
+            if (token in self.type_changers
+                and token < self.sum_max_num_sent):
+                type_ = initial_type + 1
+            temp_output_token_types.append(output_token_types[0] + [type_])
+            temp_output_likes.append(top_k_log_soft[i])
+
+            temp.append((temp_output_tokens[-1],
+                         temp_output_token_types[-1],
+                         temp_output_likes[-1]))
+
+        output_tokens = [row[0] for row in temp]
+        output_token_types = [row[1] for row in temp]
+        output_likes = [row[2] for row in temp]
+        return (output_tokens,
+                output_token_types,
+                output_likes)
 
     def search(self,
                input_tokens,
@@ -192,7 +230,7 @@ class Summarizer(nn.Module):
 
             assert tokens.shape[0] != k
 
-        with torch.inference_mode:
+        with torch.inference_mode():
             predictions = self.model(input_tokens,
                                      input_token_types,
                                      tokens,
