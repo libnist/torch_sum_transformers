@@ -124,7 +124,7 @@ class Summarizer(nn.Module):
             encoder_input = encoder_input[:, :self.max_input_length]
 
         # 3. Turn our input to `torch.tensor` so it can be fed into the model.
-        encoder_input = self.torch_tensor(encoder_input)
+        encoder_input = self.torch_tensor(encoder_input).unsqueeze(0)
 
         # 4. Divide the input into tokens and token types
         input_tokens = encoder_input[:, 0, :]
@@ -137,24 +137,20 @@ class Summarizer(nn.Module):
             input_token_types=input_token_types,
             k=self.k
         )
-         
-        print("Tokens", output_tokens_list)
-        print("output_token_types", output_token_types_list)
-        print("Likes", output_likes)
 
-        # for _ in range(self.max_output_length - 1):
-        #     (output_tokens_list,
-        #      output_token_types_list,
-        #      output_likes) = self.search(
-        #         input_tokens=input_tokens,
-        #         input_token_types=input_token_types,
-        #         output_tokens=output_tokens_list,
-        #         output_token_types=output_token_types_list,
-        #         output_likes=output_likes,
-        #         k=self.k
-        #     )
+        for _ in range(self.max_output_length - 1):
+            (output_tokens_list,
+             output_token_types_list,
+             output_likes) = self.search(
+                input_tokens=input_tokens,
+                input_token_types=input_token_types,
+                output_tokens=output_tokens_list,
+                output_token_types=output_token_types_list,
+                output_likes=output_likes,
+                k=self.k
+            )
 
-        # return self.sum_tokenizer.decode(output_tokens_list[-1])
+        return self.sum_tokenizer.decode(output_tokens_list[-1])
 
     def torch_tensor(self,
                      x):
@@ -165,17 +161,19 @@ class Summarizer(nn.Module):
                 input_tokens,
                 input_token_types,
                 k):
-        
+
         initial_token = self.start
         initial_type = 0
         output_tokens = [[initial_token]]
         output_token_types = [[initial_type]]
+        tokens = self.torch_tensor(output_tokens)
+        token_types = self.torch_tensor(output_token_types)
 
-        with torch.iference_mode():
+        with torch.inference_mode():
             predictions = self.model(input_tokens,
                                      input_token_types,
-                                     output_tokens,
-                                     output_token_types)
+                                     tokens,
+                                     token_types)
 
             top_k = torch.topk(torch.log_softmax(predictions[:, -1, :],
                                                  dim=-1),
@@ -188,16 +186,18 @@ class Summarizer(nn.Module):
         temp_output_tokens = []
         temp_output_token_types = []
         temp_output_likes = []
-        
+
         temp = []
 
         for i in range(k):
             token = top_k_ind[i]
             temp_output_tokens.append(output_tokens[0] + [token])
+            type_ = initial_type
             if (token in self.type_changers
-                and token < self.sum_max_num_sent):
+                    and token < self.sum_max_num_sent):
                 type_ = initial_type + 1
-            temp_output_token_types.append(output_token_types[0] + [type_])
+            temp_output_token_types.append(
+                output_token_types[0] + [type_])
             temp_output_likes.append(top_k_log_soft[i])
 
             temp.append((temp_output_tokens[-1],
@@ -217,18 +217,15 @@ class Summarizer(nn.Module):
                output_tokens,
                output_token_types,
                output_likes,
-               k,
-               first=False):
+               k):
 
         tokens = self.torch_tensor(output_tokens)
         token_types = self.torch_tensor(output_token_types)
 
-        if not first:
+        input_tokens = input_tokens.repeat((k, 1))
+        input_token_types = input_token_types.repeat((k, 1))
 
-            input_tokens = input_tokens.repeat((k, 1))
-            input_token_types = input_token_types.repeat((k, 1))
-
-            assert tokens.shape[0] != k
+        assert tokens.shape[0] != k
 
         with torch.inference_mode():
             predictions = self.model(input_tokens,
@@ -253,36 +250,27 @@ class Summarizer(nn.Module):
         for i in range(k):
             summary = output_tokens[i]
             summary_types = output_token_types[i]
-            if not first:
-                like = output_likes[i]
+            like = output_likes[i]
             last_type = summary_types[-1]
             last_token = summary[-1]
             for j in range(k):
                 if last_token in self.end:
                     temp_output_tokens.append(summary)
                     temp_output_token_types.append(summary_types)
-                    if first:
-                        temp_output_likes.append(top_k_log_soft[i][j])
-                    else:
-                        temp_output_likes.append(like)
+                    temp_output_likes.append(like)
                 else:
                     token = top_k_ind[i][j]
                     temp_output_tokens.append(summary + [token])
+                    type_ = last_type
                     if (token in self.type_changers
                             and token < self.sum_max_num_sent):
                         type_ = last_type + 1
                     temp_output_token_types.append(summary_types + [type_])
-                    if first:
-                        temp_output_likes.append(top_k_log_soft[i][j])
-                    else:
-                        temp_output_likes.append(like + top_k_log_soft[i][j])
+                    temp_output_likes.append(like + top_k_log_soft[i][j])
 
             temp.append((temp_output_tokens[-1],
                          temp_output_token_types[-1],
                          temp_output_likes[-1]))
-
-            if first:
-                break
 
         temp = sorted(temp, k=lambda x: x[-1])
 
