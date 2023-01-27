@@ -150,7 +150,7 @@ class Summarizer(nn.Module):
                 k=self.k
             )
 
-        return self.sum_tokenizer.decode(output_tokens_list[-1])
+        return self.sum_tokenizer.decode(output_tokens_list[0])
 
     def torch_tensor(self,
                      x):
@@ -178,7 +178,8 @@ class Summarizer(nn.Module):
             top_k = torch.topk(torch.log_softmax(predictions[:, -1, :],
                                                  dim=-1),
                                k=k,
-                               dim=-1)
+                               dim=-1,
+                               largest=False)
 
             top_k_log_soft = top_k.values.squeeze().tolist()
             top_k_ind = top_k.indices.squeeze().tolist()
@@ -225,7 +226,7 @@ class Summarizer(nn.Module):
         input_tokens = input_tokens.repeat((k, 1))
         input_token_types = input_token_types.repeat((k, 1))
 
-        assert tokens.shape[0] != k
+        assert tokens.shape[0] == k
 
         with torch.inference_mode():
             predictions = self.model(input_tokens,
@@ -236,7 +237,8 @@ class Summarizer(nn.Module):
             top_k = torch.topk(torch.log_softmax(predictions[:, -1, :],
                                                  dim=-1),
                                k=k,
-                               dim=-1)
+                               dim=-1,
+                               largets=False)
 
             top_k_log_soft = top_k.values.squeeze().tolist()
             top_k_ind = top_k.indices.squeeze().tolist()
@@ -272,11 +274,11 @@ class Summarizer(nn.Module):
                          temp_output_token_types[-1],
                          temp_output_likes[-1]))
 
-        temp = sorted(temp, k=lambda x: x[-1])
+        temp = sorted(temp, key=lambda x: x[-1])
 
-        output_tokens = [row[0] for row in temp[-k:]]
-        output_token_types = [row[1] for row in temp[-k:]]
-        output_likes = [row[2] for row in temp[-k:]]
+        output_tokens = [row[0] for row in temp[:k]]
+        output_token_types = [row[1] for row in temp[:k]]
+        output_likes = [row[2] for row in temp[:k]]
         return (output_tokens,
                 output_token_types,
                 output_likes)
