@@ -9,7 +9,7 @@ import evaluate
 # Replication of SparseCategoricalCrossEnropy in keras, wrapper
 
 
-def log_softmax(x): return torch.log_.softmax(x, dim=-1)
+def log_softmax(x): return torch.log_softmax(x, dim=-1)
 def one_hot(x, nc): return nn.functional.one_hot(x, nc)
 
 
@@ -33,5 +33,17 @@ def CELossWrapper(fn: FunctionType, nc: int):
             loss += fn(y_pred[i], one_hot(y_true[i], nc))
         return loss / batch_size
     return inner
+
+def Accuracy(ignore_index=None):
+
+    def accuracy(y_pred: torch.tensor,
+                 y_true: torch.tensor):
+        match_ = y_pred == y_true
+        
+        mask = y_true != ignore_index if ignore_index else y_true        
+
+        match_ = match_ & mask
+        return torch.sum(match_) / torch.sum(mask)
+    return accuracy
 
 rouge = evaluate.load("rouge")
