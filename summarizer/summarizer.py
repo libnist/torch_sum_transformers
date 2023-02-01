@@ -150,7 +150,7 @@ class Summarizer(nn.Module):
                 k=self.k
             )
 
-        return self.sum_tokenizer.decode(output_tokens_list[0])
+        return self.sum_tokenizer.decode(output_tokens_list[-1])
 
     def torch_tensor(self,
                      x):
@@ -178,8 +178,7 @@ class Summarizer(nn.Module):
             top_k = torch.topk(torch.log_softmax(predictions[:, -1, :],
                                                  dim=-1),
                                k=k,
-                               dim=-1,
-                               largest=False)
+                               dim=-1)
 
             top_k_log_soft = top_k.values.squeeze().tolist()
             top_k_ind = top_k.indices.squeeze().tolist()
@@ -237,8 +236,7 @@ class Summarizer(nn.Module):
             top_k = torch.topk(torch.log_softmax(predictions[:, -1, :],
                                                  dim=-1),
                                k=k,
-                               dim=-1,
-                               largets=False)
+                               dim=-1)
 
             top_k_log_soft = top_k.values.squeeze().tolist()
             top_k_ind = top_k.indices.squeeze().tolist()
@@ -270,15 +268,15 @@ class Summarizer(nn.Module):
                     temp_output_token_types.append(summary_types + [type_])
                     temp_output_likes.append(like + top_k_log_soft[i][j])
 
-            temp.append((temp_output_tokens[-1],
-                         temp_output_token_types[-1],
-                         temp_output_likes[-1]))
+                temp.append((temp_output_tokens[-1],
+                            temp_output_token_types[-1],
+                            temp_output_likes[-1]))
 
         temp = sorted(temp, key=lambda x: x[-1])
 
-        output_tokens = [row[0] for row in temp[:k]]
-        output_token_types = [row[1] for row in temp[:k]]
-        output_likes = [row[2] for row in temp[:k]]
+        output_tokens = [row[0] for row in temp[-k:]]
+        output_token_types = [row[1] for row in temp[-k:]]
+        output_likes = [row[2] for row in temp[-k:]]
         return (output_tokens,
                 output_token_types,
                 output_likes)
