@@ -6,3 +6,4 @@ torchinfo
 evaluate
 rouge_score
 SentencePiece
+torchmetrics
