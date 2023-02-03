@@ -181,6 +181,7 @@ class FnetCNNEncoder(nn.Module):
                  num_word_embeddings: int,
                  num_type_embeddings: int,
                  sequence_len: int,
+                 padding_index: int = None,
                  fnet_cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> torch.nn.Module:
         """Return an FnetCNNEncoder with `num_layers` of FnetEncoderLayer.
@@ -209,7 +210,8 @@ class FnetCNNEncoder(nn.Module):
             num_word_embeddings=num_word_embeddings,
             num_type_embeddings=num_type_embeddings,
             embedding_dim=model_dim,
-            sequence_len=sequence_len
+            sequence_len=sequence_len,
+            padding_index=padding_index
         )
 
         # Create a list of FnetCNNEncoderLayer Module.
@@ -248,6 +250,7 @@ class MHACNNEncoder(nn.Module):
                  num_word_embeddings: int,
                  num_type_embeddings: int,
                  sequence_len: int,
+                 padding_index: int = None,
                  cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> torch.nn.Module:
         super().__init__()
@@ -260,7 +263,8 @@ class MHACNNEncoder(nn.Module):
             num_word_embeddings=num_word_embeddings,
             num_type_embeddings=num_type_embeddings,
             embedding_dim=model_dim,
-            sequence_len=sequence_len
+            sequence_len=sequence_len,
+            padding_index=padding_index
         )
 
         # Create a list of FnetCNNEncoderLayer Module.
@@ -301,6 +305,7 @@ class Decoder(nn.Module):
                  num_word_embeddings: int,
                  num_type_embeddings: int,
                  sequence_len: int,
+                 padding_index: int = None,
                  dropout: float = 0.5) -> torch.nn.Module:
         """Return a Decoder stacked with DecoderLayers.
 
@@ -325,7 +330,8 @@ class Decoder(nn.Module):
             num_word_embeddings=num_word_embeddings,
             num_type_embeddings=num_type_embeddings,
             embedding_dim=model_dim,
-            sequence_len=sequence_len
+            sequence_len=sequence_len,
+            padding_index=padding_index
         )
 
         # Create a list of DecoderLayers.

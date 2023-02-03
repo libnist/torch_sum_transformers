@@ -9,7 +9,8 @@ class TripleEmbeddingBlock(nn.Module):
                  num_word_embeddings: int,
                  num_type_embeddings: int,
                  embedding_dim: int,
-                 sequence_len: int) -> torch.nn.Module:
+                 sequence_len: int,
+                 padding_index: int = None) -> torch.nn.Module:
         """Return an embedding block that also uses positional and
         type embedding.
 
@@ -23,10 +24,13 @@ class TripleEmbeddingBlock(nn.Module):
             torch.nn.Module: PyTorch Module.
         """
         super(TripleEmbeddingBlock, self).__init__()
+        
+        self.padding_index = padding_index
 
         # Create word embedding layer.
         self.word_embedding = nn.Embedding(num_embeddings=num_word_embeddings,
-                                           embedding_dim=embedding_dim)
+                                           embedding_dim=embedding_dim,
+                                           padding_idx=padding_index)
 
         # Create type embedding layer.
         self.type_embedding = nn.Embedding(num_embeddings=num_type_embeddings,
@@ -51,9 +55,15 @@ class TripleEmbeddingBlock(nn.Module):
         type_embedding = self.type_embedding(token_types)
 
         # Add all the embeddings to produce the output tensor
-        return (word_embedding +
-                type_embedding +
-                self.positional_embedding[:, :token_length, :])
+        output = (word_embedding +
+                  type_embedding +
+                  self.positional_embedding[:, :token_length, :])
+        
+        if self.padding_index:
+            paddings = (tokens != self.padding_index).unsqueeze(-1)
+            output *- paddings
+            
+        return output
 
 
 class MLPBlock(nn.Module):

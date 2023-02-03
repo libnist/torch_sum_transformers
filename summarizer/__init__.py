@@ -1,1 +1,1 @@
-from .summarizer import Summarizer
+from .summarizer import GreedySummarizer
