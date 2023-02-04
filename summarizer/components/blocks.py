@@ -61,7 +61,7 @@ class TripleEmbeddingBlock(nn.Module):
         
         if self.padding_index:
             paddings = (tokens != self.padding_index).unsqueeze(-1)
-            output *- paddings
+            output *= paddings
             
         return output
 
