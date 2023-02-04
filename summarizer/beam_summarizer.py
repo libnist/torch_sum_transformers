@@ -119,7 +119,7 @@ class BeamSummarizer(nn.Module):
         logits = self.model(encoder_input_tokens, encoder_input_token_ids,
                             decoder_input_tokens, decoder_input_token_ids)
         
-        logits = logits[:, -1, :].contiguous()
+        logits = logits[:, -1, :].contiguous().log_softmax(dim=-1)
         
         logits += log_probs
         
