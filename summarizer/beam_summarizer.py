@@ -10,6 +10,7 @@ class BeamSummarizer(nn.Module):
                  model: torch.nn.Module,
                  document_tokenizer: CustomTokenizer,
                  summary_tokenizer:CustomTokenizer,
+                 max_in_len: int,
                  max_out_len: int,
                  sum_max_num_sentences: int,
                  beam_width):
@@ -20,6 +21,7 @@ class BeamSummarizer(nn.Module):
         self._doc_tokenizer = document_tokenizer
         self._sum_tokenizer = summary_tokenizer
         
+        self.max_in_len = max_in_len
         self.max_out_len = max_out_len
         self._sum_max_num_sent = sum_max_num_sentences
         self.beam_width = beam_width
@@ -40,14 +42,28 @@ class BeamSummarizer(nn.Module):
         
         encoder_in = self.torch_tensor(encoder_in)
         encoder_in_types = self.torch_tensor(encoder_in_types)
+
+        encoder_shape = encoder_in.shape[-1]
+
+        if encoder_shape > self.max_in_len:
+          encoder_in = encoder_in[:, :self.max_in_len]
+          encoder_in_types = encoder_in_types[:, :self.max_in_len]
+        if encoder_shape < self.max_in_len:
+          temp_in = torch.ones((1, self.max_in_len),
+                               dtype=torch.int).to(self.device) * 4
+          temp_in[:, :encoder_shape] = encoder_in
+          encoder_in = temp_in
+          temp_in[:, :encoder_shape] = encoder_in_types
+          encoder_in_types = temp_in
         
         decoder_in, decoder_in_types = self._sum_tokenizer.encode("")
         decoder_in = self.torch_tensor(decoder_in[:-1])
         decoder_in_types = self.torch_tensor(decoder_in_types[:-1])
         
-        initial_types = torch.zeros(size=(self.beam_width, 1))
+        initial_types = torch.zeros(size=(self.beam_width, 1),
+                                    dtype=torch.int).to(self.device)
         
-        log_probs = torch.tensor([[0.0]], requires_grad=True)
+        log_probs = torch.tensor([[0.0]], requires_grad=True).to(self.device)
         
         decoder_in, log_probs = self.next_candidates(
                 encoder_input_tokens=encoder_in,
@@ -131,15 +147,7 @@ class BeamSummarizer(nn.Module):
         
         for type_changer in self.type_changers:
             new_types = new_types | (new_candidates == type_changer)
+
+        increasing_types = current_types < self._sum_max_num_sent
             
-        return current_types + new_types
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        return current_types + (new_types & increasing_types)
