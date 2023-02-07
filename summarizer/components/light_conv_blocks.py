@@ -50,13 +50,23 @@ class LightConvBlock(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model)
 
     def forward(self, x: torch.tensor):
-        output = self.in_linear(x)
-        output = self.glu(output)
-        output = output.permute(0, 2, 1)
+        conv_in = self.in_linear(x)
+        conv_in = self.glu(conv_in)
+        conv_in = conv_in.permute(0, 2, 1)
+        
+        output = F.conv1d(
+                input=conv_in[:, :self.channels, :],
+                weight=F.dropout(F.softmax(self.weight, dim=-1),
+                                 p=self.dropout),
+                bias=self.bias,
+                padding="same",
+                groups=self.channels,
+                dilation=self.dilation
+        )
 
-        for i in range(0, self.d_model, self.channels):
-            output[:, i:i+self.channels, :] = F.conv1d(
-                input=output[:, i:i+self.channels, :],
+        for i in range(self.channels, self.d_model, self.channels):
+            temp = F.conv1d(
+                input=conv_in[:, i:i+self.channels, :],
                 weight=F.dropout(F.softmax(self.weight, dim=-1),
                                  p=self.dropout),
                 bias=self.bias,
@@ -64,6 +74,7 @@ class LightConvBlock(nn.Module):
                 groups=self.channels,
                 dilation=self.dilation
             )
+            output = torch.concat((output, temp), dim=1)
         output = self.out_linear(output.permute(0, 2, 1))
         return self.layer_norm(output + x)
 
