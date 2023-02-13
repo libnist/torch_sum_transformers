@@ -24,7 +24,8 @@ def train_step(model: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                device: str,
                log_per_batch: int = 100,
-               pretrained: bool = False) -> Tuple[float, float]:
+               pretrained: bool = False,
+               with_token_types: bool = True) -> Tuple[float, float]:
     """Performs one epoch.
 
     Args:
@@ -74,12 +75,18 @@ def train_step(model: torch.nn.Module,
             # add input sums
             inputs.append(y.to(device))
         else:
-            # add input docs
-            inputs.append(X[:, 0, :].to(device))
-            inputs.append(X[:, 1, :].to(device))
-            # add input sums
-            inputs.append(y[:, 0, :].to(device))
-            inputs.append(y[:, 1, :].to(device))
+            if with_token_types:
+                # add input tokens
+                inputs.append(X[:, 0, :].to(device))
+                inputs.append(y[:, 0, :].to(device))
+                
+                # add input token types
+                inputs.append(X[:, 1, :].to(device))
+                inputs.append(y[:, 1, :].to(device))
+            else:
+                # add input tokens
+                inputs.append(X[:, 0, :].to(device))
+                inputs.append(y[:, 0, :].to(device))
         z = z.to(device)
 
         # Forward pass
@@ -126,7 +133,8 @@ def test_step(model: torch.nn.Module,
               loss_function: torch.nn.Module,
               accuracy_function: FunctionType,
               device: str,
-              pretrained: bool = False) -> Tuple[float, float]:
+              pretrained: bool = False,
+              with_token_types: bool = True) -> Tuple[float, float]:
     """Performs one validation step on validation or test dataset.
 
     Args:
@@ -163,12 +171,18 @@ def test_step(model: torch.nn.Module,
                 # add input sums
                 inputs.append(y.to(device))
             else:
-                # add input docs
-                inputs.append(X[:, 0, :].to(device))
-                inputs.append(X[:, 1, :].to(device))
-                # add input sums
-                inputs.append(y[:, 0, :].to(device))
-                inputs.append(y[:, 1, :].to(device))
+                if with_token_types:
+                    # add input tokens
+                    inputs.append(X[:, 0, :].to(device))
+                    inputs.append(y[:, 0, :].to(device))
+                    
+                    # add input token types
+                    inputs.append(X[:, 1, :].to(device))
+                    inputs.append(y[:, 1, :].to(device))
+                else:
+                    # add input tokens
+                    inputs.append(X[:, 0, :].to(device))
+                    inputs.append(y[:, 0, :].to(device))
             z = z.to(device)
 
             # Forward pass
@@ -217,7 +231,8 @@ def train(model: torch.nn.Module,
           wandb_config: dict = None,
           wandb_proj: str = None,
           wandb_id: str = None,
-          tb_writer: torch.utils.tensorboard.SummaryWriter = None) -> Dict[str, list]:
+          tb_writer: torch.utils.tensorboard.SummaryWriter = None,
+          with_token_types: bool = True) -> Dict[str, list]:
     """Performs the whole training procces given the inputs.
 
     Args:
@@ -294,7 +309,8 @@ def train(model: torch.nn.Module,
                                            optimizer=optimizer,
                                            log_per_batch=log_per_batch,
                                            device=device,
-                                           pretrained=pretrained)
+                                           pretrained=pretrained,
+                                           with_token_types=with_token_types)
 
         # Append the results of the current finished epoch.
         results["train_losses"].append(train_loss)
@@ -308,7 +324,8 @@ def train(model: torch.nn.Module,
                                             loss_function=loss_function,
                                             accuracy_function=accuracy_function,
                                             device=device,
-                                            pretrained=pretrained)
+                                            pretrained=pretrained,
+                                            with_token_types=with_token_types)
             # Append the results of the current finished validation epoch.
             results["val_losses"].append(test_loss)
             results["val_accuracies"].append(test_acc)

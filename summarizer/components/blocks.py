@@ -3,13 +3,14 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from ..utils.input import positional_encoding
+
 
 class TripleEmbeddingBlock(nn.Module):
     def __init__(self,
                  num_word_embeddings: int,
-                 num_type_embeddings: int,
                  embedding_dim: int,
-                 sequence_len: int,
+                 num_type_embeddings: int = None,
                  padding_index: int = None) -> torch.nn.Module:
         """Return an embedding block that also uses positional and
         type embedding.
@@ -25,44 +26,57 @@ class TripleEmbeddingBlock(nn.Module):
         """
         super(TripleEmbeddingBlock, self).__init__()
         
+        self.embedding_dim = embedding_dim
         self.padding_index = padding_index
+        self.error_message = "Model is defined w/o type embedding."
+        self.missing_types = "Missing type inputs."
 
         # Create word embedding layer.
         self.word_embedding = nn.Embedding(num_embeddings=num_word_embeddings,
                                            embedding_dim=embedding_dim,
                                            padding_idx=padding_index)
 
-        # Create type embedding layer.
-        self.type_embedding = nn.Embedding(num_embeddings=num_type_embeddings,
-                                           embedding_dim=embedding_dim)
+        if num_type_embeddings is not None:
+            # Create type embedding layer.
+            self.type_embedding = nn.Embedding(
+                num_embeddings=num_type_embeddings,
+                embedding_dim=embedding_dim)
 
-        # Create positional embedding layer.
-        self.positional_embedding = nn.Parameter(
-            torch.rand((1, sequence_len, embedding_dim)),
-            requires_grad=True
-        )
+        # # Create positional embedding layer.
+        # self.positional_embedding = nn.Parameter(
+        #     torch.rand((1, sequence_len, embedding_dim)),
+        #     requires_grad=True
+        # )
 
     def forward(self,
                 tokens: torch.tensor,
-                token_types: torch.tensor) -> torch.tensor:
+                token_types: torch.tensor = None) -> torch.tensor:
+        
         # Getting the length of the input
         token_length = tokens.shape[-1]
 
         # Perform word embeddings.
         word_embedding = self.word_embedding(tokens)
-
-        # Perform type embeddings.
-        type_embedding = self.type_embedding(token_types)
+        
+        # Positional embedding
+        positional_embedding = positional_encoding(token_length,
+                                                    self.embedding_dim)
 
         # Add all the embeddings to produce the output tensor
         output = (word_embedding +
-                  type_embedding +
-                  self.positional_embedding[:, :token_length, :])
+                  positional_embedding.to(word_embedding.dtype))
         
+        if token_types is not None:
+            assert hasattr(self, "type_embedding"), self.error_message
+            # Perform type embeddings.
+            output += self.type_embedding(token_types)
+        elif hasattr(self, "type_embedding"):
+            raise ValueError(self.missing_types)
+
         if self.padding_index:
             paddings = (tokens != self.padding_index).unsqueeze(-1)
             output *= paddings
-            
+
         return output
 
 
@@ -230,8 +244,8 @@ class CNNBlock(nn.Module):
                           padding="same",
                           groups=model_dim),
                 nn.Conv1d(in_channels=model_dim,
-                      out_channels=model_dim,
-                      kernel_size=1),
+                          out_channels=model_dim,
+                          kernel_size=1),
                 nn.ReLU(),
                 nn.MaxPool1d(kernel_size=kernel_size,
                              stride=2),
@@ -281,10 +295,10 @@ class MHABlock(nn.Module):
                 value: torch.tensor = None,
                 attn_mask: torch.tensor = None) -> torch.tensor:
         # Performing MHSA.
-        
+
         if key is None and value is None:
             key, value = query, query
-        
+
         output, _ = self.mha(query=query,
                              key=key,
                              value=value,

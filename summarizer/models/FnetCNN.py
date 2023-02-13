@@ -13,13 +13,11 @@ class FnetCNNModel(nn.Module):
                  extend_dim: int,
                  enc_num_layers: int,
                  document_vocab_size: int,
-                 max_document_sentences: int,
-                 doc_sequence_len: int,
                  dec_num_layers: int,
                  num_heads: int,
                  summary_vocab_size: int,
-                 max_summary_sentences: int,
-                 summary_sequence_len: int,
+                 max_document_sentences: int = None,
+                 max_summary_sentences: int = None,
                  padding_index: int = None,
                  fnet_cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> nn.Module:
@@ -56,7 +54,6 @@ class FnetCNNModel(nn.Module):
             extend_dim=extend_dim,
             num_word_embeddings=document_vocab_size,
             num_type_embeddings=max_document_sentences,
-            sequence_len=doc_sequence_len,
             fnet_cnn_kernel_size=fnet_cnn_kernel_size,
             dropout=dropout,
             padding_index=padding_index
@@ -67,7 +64,6 @@ class FnetCNNModel(nn.Module):
             num_word_embeddings=summary_vocab_size,
             num_type_embeddings=max_summary_sentences,
             embedding_dim=model_dim,
-            sequence_len=summary_sequence_len,
             padding_index=padding_index
         )
         

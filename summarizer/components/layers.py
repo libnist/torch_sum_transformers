@@ -49,7 +49,8 @@ class FnetCNNEncoderLayer(nn.Module):
 
         # Pass the input through MLP block.
         return self.mlp_block(output)
-    
+
+
 class MHACNNEncoderLayer(nn.Sequential):
     def __init__(self,
                  model_dim: int,
@@ -58,29 +59,29 @@ class MHACNNEncoderLayer(nn.Sequential):
                  cnn_kernel_size: int,
                  dropout: float = .5) -> torch.nn.Module:
         super().__init__()
-        
+
         self.add_module("cnn_block",
                         CNNBlock(
                             num_cnn_blocks=1,
                             model_dim=model_dim,
                             kernel_size=cnn_kernel_size,
                             dropout=dropout
-                            )
-        )
+                        )
+                        )
 
         self.add_module("MHA",
                         MHABlock(
                             embed_dim=model_dim,
                             num_heads=num_heads,
                             dropout=dropout
-                            )
-        )
+                        )
+                        )
 
         self.add_module("mlp",
                         MLPBlock(extend_dim=extend_dim,
-                                  output_dim=model_dim,
-                                  dropout=dropout)
-        )
+                                 output_dim=model_dim,
+                                 dropout=dropout)
+                        )
 
 
 class FnetEncoderLayer(nn.Module):
@@ -180,7 +181,6 @@ class FnetCNNEncoder(nn.Module):
                  extend_dim: int,
                  num_word_embeddings: int,
                  num_type_embeddings: int,
-                 sequence_len: int,
                  padding_index: int = None,
                  fnet_cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> torch.nn.Module:
@@ -210,7 +210,6 @@ class FnetCNNEncoder(nn.Module):
             num_word_embeddings=num_word_embeddings,
             num_type_embeddings=num_type_embeddings,
             embedding_dim=model_dim,
-            sequence_len=sequence_len,
             padding_index=padding_index
         )
 
@@ -227,20 +226,20 @@ class FnetCNNEncoder(nn.Module):
                 tokens: torch.tensor,
                 token_types: torch.tensor,
                 return_output_list: bool = False) -> torch.tensor:
-        
+
         output_list = []
-        
+
         x = self.embedding(tokens, token_types)
-        
+
         for module in self.encoder_layers:
             x = module(x)
             output_list.append(x)
-            
+
         if return_output_list:
             return output_list
         return output_list[-1]
-    
-    
+
+
 class MHACNNEncoder(nn.Module):
     def __init__(self,
                  num_layers: int,
@@ -249,7 +248,6 @@ class MHACNNEncoder(nn.Module):
                  extend_dim: int,
                  num_word_embeddings: int,
                  num_type_embeddings: int,
-                 sequence_len: int,
                  padding_index: int = None,
                  cnn_kernel_size: int = 3,
                  dropout: float = 0.5) -> torch.nn.Module:
@@ -263,7 +261,6 @@ class MHACNNEncoder(nn.Module):
             num_word_embeddings=num_word_embeddings,
             num_type_embeddings=num_type_embeddings,
             embedding_dim=model_dim,
-            sequence_len=sequence_len,
             padding_index=padding_index
         )
 
@@ -281,19 +278,18 @@ class MHACNNEncoder(nn.Module):
                 tokens: torch.tensor,
                 token_types: torch.tensor,
                 return_output_list: bool = False) -> torch.tensor:
-        
+
         output_list = []
-        
+
         x = self.embedding(tokens, token_types)
-                
+
         for module in self.encoder_layers:
             x = module(x)
             output_list.append(x)
-            
+
         if return_output_list:
             return output_list
         return output_list[-1]
-
 
 
 class Decoder(nn.Module):
@@ -304,7 +300,6 @@ class Decoder(nn.Module):
                  extend_dim: int,
                  num_word_embeddings: int,
                  num_type_embeddings: int,
-                 sequence_len: int,
                  padding_index: int = None,
                  dropout: float = 0.5) -> torch.nn.Module:
         """Return a Decoder stacked with DecoderLayers.
@@ -330,7 +325,6 @@ class Decoder(nn.Module):
             num_word_embeddings=num_word_embeddings,
             num_type_embeddings=num_type_embeddings,
             embedding_dim=model_dim,
-            sequence_len=sequence_len,
             padding_index=padding_index
         )
 

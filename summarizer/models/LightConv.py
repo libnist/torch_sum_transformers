@@ -13,10 +13,8 @@ class LightConvModel(nn.Module):
     def __init__(self,
                  source_vocab_size: int,
                  target_vocab_size: int,
-                 source_max_sentences: int,
-                 target_max_sentences: int,
-                 source_max_seq_len: int,
-                 target_max_seq_len: int,
+                 source_max_sentences: int = None,
+                 target_max_sentences: int = None,
                  d_model: int = 512,
                  n_heads: int = 8,
                  dim_feedforward: int = 2048,
@@ -33,7 +31,6 @@ class LightConvModel(nn.Module):
             num_word_embeddings=source_vocab_size,
             num_type_embeddings=source_max_sentences,
             embedding_dim=d_model,
-            sequence_len=source_max_seq_len,
             padding_index=padding_index
         )
         
@@ -41,7 +38,6 @@ class LightConvModel(nn.Module):
             num_word_embeddings=target_vocab_size,
             num_type_embeddings=target_max_sentences,
             embedding_dim=d_model,
-            sequence_len=target_max_seq_len,
             padding_index=padding_index
         )
         
@@ -88,9 +84,9 @@ class LightConvModel(nn.Module):
             
     def forward(self,
                 source_tokens: torch.tensor,
-                source_token_types: torch.tensor,
                 target_tokens: torch.tensor,
-                target_token_types: torch.tensor):
+                source_token_types: torch.tensor = None,
+                target_token_types: torch.tensor = None):
         enc_embeddings = self.enc_embeddig(source_tokens,
                                            source_token_types)
         
