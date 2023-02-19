@@ -30,11 +30,17 @@ class TripleEmbeddingBlock(nn.Module):
         self.padding_index = padding_index
         self.error_message = "Model is defined w/o type embedding."
         self.missing_types = "Missing type inputs."
-
+        
         # Create word embedding layer.
         self.word_embedding = nn.Embedding(num_embeddings=num_word_embeddings,
                                            embedding_dim=embedding_dim,
                                            padding_idx=padding_index)
+        
+        self.dtype = next(iter(self.word_embedding.parameters())).dtype
+        self.device = next(iter(self.word_embedding.parameters())).device
+        
+        self.sqrt_model_dim = (torch.tensor(embedding_dim ** (0.5))
+                               .to(self.device))
 
         if num_type_embeddings is not None:
             # Create type embedding layer.
@@ -56,20 +62,22 @@ class TripleEmbeddingBlock(nn.Module):
         token_length = tokens.shape[-1]
 
         # Perform word embeddings.
-        word_embedding = self.word_embedding(tokens)
+        word_embedding = self.word_embedding(tokens) * self.sqrt_model_dim
         
         # Positional embedding
         positional_embedding = positional_encoding(token_length,
-                                                    self.embedding_dim)
+                                                    self.embedding_dim,
+                                                    self.device,
+                                                    self.dtype)
 
         # Add all the embeddings to produce the output tensor
         output = (word_embedding +
-                  positional_embedding.to(word_embedding.dtype))
+                  positional_embedding)
         
         if token_types is not None:
             assert hasattr(self, "type_embedding"), self.error_message
             # Perform type embeddings.
-            output += self.type_embedding(token_types)
+            output += self.type_embedding(token_types) * self.sqrt_model_dim
         elif hasattr(self, "type_embedding"):
             raise ValueError(self.missing_types)
 

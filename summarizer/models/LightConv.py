@@ -11,10 +11,10 @@ from ..components.blocks import TripleEmbeddingBlock
 
 class LightConvModel(nn.Module):
     def __init__(self,
-                 source_vocab_size: int,
-                 target_vocab_size: int,
-                 source_max_sentences: int = None,
-                 target_max_sentences: int = None,
+                 vocab_size: int,
+                #  target_vocab_size: int,
+                 max_sentences: int = None,
+                #  target_max_sentences: int = None,
                  d_model: int = 512,
                  n_heads: int = 8,
                  dim_feedforward: int = 2048,
@@ -27,19 +27,19 @@ class LightConvModel(nn.Module):
         
         super().__init__()
         
-        self.enc_embeddig = TripleEmbeddingBlock(
-            num_word_embeddings=source_vocab_size,
-            num_type_embeddings=source_max_sentences,
+        self.embeddig = TripleEmbeddingBlock(
+            num_word_embeddings=vocab_size,
+            num_type_embeddings=max_sentences,
             embedding_dim=d_model,
             padding_index=padding_index
         )
         
-        self.dec_embeddig = TripleEmbeddingBlock(
-            num_word_embeddings=target_vocab_size,
-            num_type_embeddings=target_max_sentences,
-            embedding_dim=d_model,
-            padding_index=padding_index
-        )
+        # self.dec_embeddig = TripleEmbeddingBlock(
+        #     num_word_embeddings=target_vocab_size,
+        #     num_type_embeddings=target_max_sentences,
+        #     embedding_dim=d_model,
+        #     padding_index=padding_index
+        # )
         
         if encoder_dilations:
             self.encoder = nn.Sequential(
@@ -80,20 +80,20 @@ class LightConvModel(nn.Module):
             )
             
         self.classifier = nn.Linear(in_features=d_model,
-                                    out_features=target_vocab_size)
+                                    out_features=vocab_size)
             
     def forward(self,
                 source_tokens: torch.tensor,
                 target_tokens: torch.tensor,
                 source_token_types: torch.tensor = None,
                 target_token_types: torch.tensor = None):
-        enc_embeddings = self.enc_embeddig(source_tokens,
-                                           source_token_types)
+        enc_embeddings = self.embeddig(source_tokens,
+                                       source_token_types)
         
         enc_output = self.encoder(enc_embeddings)
         
-        output = self.dec_embeddig(target_tokens,
-                                   target_token_types)
+        output = self.embeddig(target_tokens,
+                               target_token_types)
         
         for decoder in self.decoder:
             output = decoder(output,
