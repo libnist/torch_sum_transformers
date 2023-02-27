@@ -35,4 +35,4 @@ def positional_encoding(length, depth, device, dtype = torch.float):
       [np.sin(angle_rads), np.cos(angle_rads)],
       axis=-1) 
 
-  return torch.tensor(pos_encoding, dtype=dtype).unsqueeze(0).to(device)
+  return torch.tensor(pos_encoding, dtype=dtype, device=device).unsqueeze(0)

@@ -36,11 +36,7 @@ class TripleEmbeddingBlock(nn.Module):
                                            embedding_dim=embedding_dim,
                                            padding_idx=padding_index)
         
-        self.dtype = next(iter(self.word_embedding.parameters())).dtype
-        self.device = next(iter(self.word_embedding.parameters())).device
-        
-        self.sqrt_model_dim = (torch.tensor(embedding_dim ** (0.5))
-                               .to(self.device))
+        self.sqrt_model_dim = embedding_dim ** (0.5)
 
         if num_type_embeddings is not None:
             # Create type embedding layer.
@@ -67,8 +63,8 @@ class TripleEmbeddingBlock(nn.Module):
         # Positional embedding
         positional_embedding = positional_encoding(token_length,
                                                     self.embedding_dim,
-                                                    self.device,
-                                                    self.dtype)
+                                                    word_embedding.device,
+                                                    word_embedding.dtype)
 
         # Add all the embeddings to produce the output tensor
         output = (word_embedding +
