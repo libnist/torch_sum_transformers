@@ -13,9 +13,11 @@ class GreedySummarizer(nn.Module):
                  summary_tokenizer: CustomTokenizer,
                  max_input_length: int,
                  max_output_length: int,
-                 summary_max_num_sentences: int):
+                 summary_max_num_sentences: int,
+                 with_token_types: int = True):
         super().__init__()
-
+        
+        self.with_token_types = with_token_types
         self.model = model
         self.model.eval()
 
@@ -76,21 +78,26 @@ class GreedySummarizer(nn.Module):
             output_token_types_tensor = self.torch_tensor(
                 output_token_types_list
             )
-
-            prediction = self.model(input_tokens,
-                                    input_token_types,
-                                    output_tokens_tensor,
-                                    output_token_types_tensor)
+            
+            if self.with_token_types:
+                prediction = self.model(input_tokens,
+                                        input_token_types,
+                                        output_tokens_tensor,
+                                        output_token_types_tensor)
+            else:
+                prediction = self.model(input_tokens,
+                                        output_tokens_tensor)
 
             prediction = prediction[0, -1, :].log_softmax(dim=-1).argmax(dim=-1)
             prediction_id = prediction.item()
             output_tokens_list.append(prediction_id)
+            
+            if self.with_token_types:
+                if (prediction_id in self.type_changers
+                    and current_type < self.sum_max_num_sent):
+                    current_type += 1
 
-            if (prediction_id in self.type_changers
-                and current_type < self.sum_max_num_sent):
-                current_type += 1
-
-            output_token_types_list.append(current_type)
+                output_token_types_list.append(current_type)
 
             if prediction_id in self.end:
                 break
