@@ -81,9 +81,9 @@ class FnetCNNModel(nn.Module):
 
     def forward(self,
                 doc_tokens: torch.tensor,
-                doc_token_types: torch.tensor,
                 sum_tokens: torch.tensor,
-                sum_token_types: torch.tensor) -> torch.tensor:
+                doc_token_types: torch.tensor = None,
+                sum_token_types: torch.tensor = None) -> torch.tensor:
         """Forward pass of the FnetCNNTransformer model.
 
         Args:
