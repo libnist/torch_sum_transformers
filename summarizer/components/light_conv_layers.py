@@ -11,7 +11,8 @@ class EncoderLayer(nn.Sequential):
                  dim_feedforward: int,
                  kernel_size: int = 3,
                  dropout: float = 0.3,
-                 dilation: int = None):
+                 dilation: int = None,
+                 maxpool: bool = False):
         super().__init__()
         
         self.add_module("LightConv",
@@ -19,7 +20,8 @@ class EncoderLayer(nn.Sequential):
                                        n_heads=n_heads,
                                        kernel_size=kernel_size,
                                        dropout=dropout,
-                                       dilation=dilation))
+                                       dilation=dilation,
+                                       maxpool=maxpool))
         
         self.add_module("MLP",
                         MLPBlock(extend_dim=dim_feedforward,

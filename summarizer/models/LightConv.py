@@ -12,9 +12,9 @@ from ..components.blocks import TripleEmbeddingBlock
 class LightConvModel(nn.Module):
     def __init__(self,
                  vocab_size: int,
-                #  target_vocab_size: int,
+                 target_vocab_size: int,
                  max_sentences: int = None,
-                #  target_max_sentences: int = None,
+                 target_max_sentences: int = None,
                  d_model: int = 512,
                  n_heads: int = 8,
                  dim_feedforward: int = 2048,
@@ -23,7 +23,8 @@ class LightConvModel(nn.Module):
                  encoder_kernels: list = [3, 7, 15, 31, 31, 31, 31],
                  decoder_kernels: list = [3, 7, 15, 31, 31, 31],
                  encoder_dilations: list = None,
-                 decoder_dilations: list = None):
+                 decoder_dilations: list = None,
+                 maxpool: bool = False):
         
         super().__init__()
         
@@ -34,12 +35,12 @@ class LightConvModel(nn.Module):
             padding_index=padding_index
         )
         
-        # self.dec_embeddig = TripleEmbeddingBlock(
-        #     num_word_embeddings=target_vocab_size,
-        #     num_type_embeddings=target_max_sentences,
-        #     embedding_dim=d_model,
-        #     padding_index=padding_index
-        # )
+        self.dec_embeddig = TripleEmbeddingBlock(
+            num_word_embeddings=target_vocab_size,
+            num_type_embeddings=target_max_sentences,
+            embedding_dim=d_model,
+            padding_index=padding_index
+        )
         
         if encoder_dilations:
             self.encoder = nn.Sequential(
@@ -47,7 +48,8 @@ class LightConvModel(nn.Module):
                                n_heads=n_heads,
                                dim_feedforward=dim_feedforward,
                                dropout=dropout,
-                               dilation=dilation)
+                               dilation=dilation,
+                               maxpool=maxpool)
                   for dilation in encoder_dilations]
             )
         else:
@@ -56,7 +58,8 @@ class LightConvModel(nn.Module):
                                n_heads=n_heads,
                                dim_feedforward=dim_feedforward,
                                kernel_size=kernel,
-                               dropout=dropout)
+                               dropout=dropout,
+                               maxpool=maxpool)
                   for kernel in encoder_kernels]
             )
             
@@ -92,8 +95,8 @@ class LightConvModel(nn.Module):
         
         enc_output = self.encoder(enc_embeddings)
         
-        output = self.embeddig(target_tokens,
-                               target_token_types)
+        output = self.dec_embeddig(target_tokens,
+                                   target_token_types)
         
         for decoder in self.decoder:
             output = decoder(output,

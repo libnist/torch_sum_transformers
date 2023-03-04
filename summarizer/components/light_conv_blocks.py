@@ -9,8 +9,11 @@ class LightConvBlock(nn.Module):
                  n_heads: int,
                  kernel_size: int = 3,
                  dropout: float = 0.3,
-                 dilation: int = None):
+                 dilation: int = None,
+                 maxpool: bool = False):
         super().__init__()
+        
+        self.maxpool = maxpool
 
         assert not d_model % n_heads, f"{d_model} is not divisable by {n_heads}"
 
@@ -75,7 +78,15 @@ class LightConvBlock(nn.Module):
                 dilation=self.dilation
             )
             output = torch.concat((output, temp), dim=1)
+        if self.maxpool:
+            output = F.max_pool1d(
+                output,
+                kernel_size=2,
+                stride=2
+            )
         output = self.out_linear(output.permute(0, 2, 1))
+        if self.maxpool:
+            return self.layer_norm(output)
         return self.layer_norm(output + x)
 
 
